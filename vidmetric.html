@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VidMetric — YouTube Video Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12151B;
+    --surface:#1B1F27;
+    --surface-2:#232833;
+    --hairline:#2E3440;
+    --paper:#F3EFE6;
+    --paper-dim:#B9B3A4;
+    --gold:#C9A24B;
+    --good:#5CC79A;
+    --good-dim:#C9A24B;
+    --bad:#8A8F9C;
+    --shadow: 0 20px 60px rgba(0,0,0,0.45);
+    --f-display:'Fraunces',serif;
+    --f-body:'Inter',sans-serif;
+  }
+  body.lang-ar{ --f-display:'Amiri',serif; --f-body:'Cairo',sans-serif; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(201,162,75,0.10), transparent 60%),
+      var(--ink);
+    color:var(--paper);
+    font-family:var(--f-body);
+    min-height:100vh;
+    padding:0 20px 60px;
+    transition:font-family .1s;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding-top:48px;}
+
+  /* ---------- Top bar: sign-in + language switcher ---------- */
+  .topbar{
+    display:flex;justify-content:space-between;align-items:center;
+    gap:12px;flex-wrap:wrap;
+    padding:14px 20px;
+    background:var(--ink);
+    border-bottom:1px solid var(--hairline);
+  }
+  body.rtl .topbar{ flex-direction:row-reverse; }
+  .brand{ display:flex; align-items:center; gap:9px; }
+  .brand-name{
+    font-family:var(--f-display); font-weight:700; font-size:18px;
+    letter-spacing:-0.01em; color:var(--paper);
+  }
+  .topbar-right{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  body.rtl .topbar-right{ flex-direction:row-reverse; }
+  .langbar{
+    display:flex;gap:2px;flex-wrap:wrap;
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    border-radius:16px;
+    padding:4px;
+  }
+  .langbar button{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:0.03em;
+    padding:7px 11px;border-radius:12px;border:none;cursor:pointer;
+    background:transparent;color:var(--paper-dim);
+    transition:background .15s, color .15s;
+  }
+  .langbar button.active{background:var(--gold);color:#1B1406;font-weight:700;}
+  .langbar button:hover:not(.active){color:var(--paper);}
+
+  .signin{display:flex;align-items:center;}
+  #gsiButton{ min-height:36px; }
+  .user-chip{
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface);border:1px solid var(--hairline);border-radius:999px;
+    padding:5px 12px 5px 5px;
+  }
+  body.rtl .user-chip{ padding:5px 5px 5px 12px; }
+  .user-chip img{width:26px;height:26px;border-radius:50%;}
+  .user-chip span{font-size:13px;font-weight:600;}
+  .user-chip button{
+    background:none;border:none;color:var(--paper-dim);cursor:pointer;font-size:16px;
+    width:20px;height:20px;line-height:1;
+  }
+  .user-chip button:hover{color:var(--paper);}
+  .greeting{
+    font-size:14px;color:var(--gold);font-weight:600;margin:12px 0 0;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  /* ---------- Screenshot guide ---------- */
+  .guide{ margin-bottom:36px; }
+  .guide-title{
+    text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.14em;
+    text-transform:uppercase;color:var(--paper-dim);margin-bottom:16px;
+  }
+  .guide-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+  }
+  @media (max-width:760px){ .guide-grid{ grid-template-columns:1fr; } }
+  .guide-card{ text-align:center; }
+  .guide-caption{ font-size:12px; color:var(--paper-dim); margin-top:10px; line-height:1.5; }
+
+  .mock{
+    background:#0E1015; border:1px solid var(--hairline); border-radius:12px;
+    overflow:hidden; margin:0 auto;
+  }
+  .mock-pc{ max-width:230px; }
+  .mock-phone{ max-width:150px; }
+  .mock-chrome{
+    display:flex;gap:5px;padding:8px 10px;background:#181B22;border-bottom:1px solid var(--hairline);
+  }
+  .mock-chrome span{width:7px;height:7px;border-radius:50%;background:#3A4150;}
+  .mock-notch{
+    width:38px;height:5px;border-radius:4px;background:#3A4150;margin:8px auto 4px;
+  }
+  .mock-body{ padding:12px 12px 14px; }
+  .mock-video{ display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  .mock-video-thumb{
+    width:36px;height:26px;border-radius:4px;flex-shrink:0;
+    background:linear-gradient(135deg,#3A2E38,#181B22);
+    display:flex;align-items:center;justify-content:center;
+    font-size:9px;color:#8A8F9C;
+  }
+  .mock-video-title{ display:flex;flex-direction:column;gap:4px;flex:1; }
+  .mock-line{ height:5px;border-radius:2px;background:#2A2E38; }
+  .mock-line.w85{ width:85%; }
+  .mock-line.w55{ width:55%; }
+  .mock-tag{
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--gold);
+    margin-bottom:8px;text-align:left;
+  }
+  .mock-row{
+    display:flex;align-items:center;justify-content:space-between;gap:6px;
+    font-size:10.5px;color:#C9C4B5;padding:4px 0;border-top:1px solid #1E222B;
+  }
+  .mock-row:first-of-type{ border-top:none; }
+  .mock-row b{ font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--paper); }
+  .mock-row .dot{ width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+  .dot.good{ background:var(--good-dim); }
+  .dot.verygood{ background:var(--good); }
+  .dot.bad{ background:var(--bad); }
+  .mock-tap{ text-align:left; }
+  .mock-tap .mock-video{ position:relative; }
+  .mock-tap .mock-video-thumb{ width:52px;height:36px; position:relative; }
+  .tap-hint{
+    position:absolute; font-size:16px; top:50%; left:50%;
+    transform:translate(-50%,-50%); animation:tapPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes tapPulse{ 0%,100%{ transform:translate(-50%,-50%) scale(1); opacity:0.85; } 50%{ transform:translate(-50%,-50%) scale(1.2); opacity:1; } }
+  .mock-taptext{ font-size:9.5px; color:var(--paper-dim); margin-top:8px; text-align:center; }
+
+  /* ---------- Preview scan animation ---------- */
+  .preview-frame{ position:relative; width:96px; border-radius:8px; overflow:hidden; }
+  .preview-frame img{ width:96px; height:auto; display:block; border:1px solid var(--hairline); border-radius:8px; }
+  .scanline{
+    position:absolute; left:0; right:0; top:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity:0; pointer-events:none;
+  }
+  .scanline.active{ animation:scan 1.2s ease-in-out infinite; opacity:1; }
+  @keyframes scan{ 0%{ top:0; } 50%{ top:calc(100% - 2px); } 100%{ top:0; } }
+
+  /* ---------- Hero ---------- */
+  .hero{text-align:center;margin-bottom:56px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .eyebrow::before,.eyebrow::after{content:"";width:28px;height:1px;background:linear-gradient(90deg,transparent,var(--hairline));}
+  .eyebrow::after{background:linear-gradient(90deg,var(--hairline),transparent);}
+  h1{
+    font-family:var(--f-display);
+    font-weight:600;
+    font-size:clamp(30px,5vw,50px);
+    line-height:1.1;
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    max-width:600px;margin:18px auto 0;
+    color:var(--paper-dim);
+    font-size:15px;line-height:1.65;
+  }
+
+  /* ---------- Upload panel ---------- */
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    border-radius:18px;
+    padding:28px;
+    box-shadow:var(--shadow);
+    margin-bottom:40px;
+  }
+  .drop{
+    border:1.5px dashed #3A4150;
+    border-radius:14px;
+    padding:36px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .2s, background .2s;
+    position:relative;
+    display:block;
+  }
+  .drop:hover, .drop.drag{
+    border-color:var(--gold);
+    background:rgba(201,162,75,0.05);
+  }
+  .drop input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+  .drop-icon{font-size:26px;margin-bottom:10px;opacity:0.8;}
+  .drop-title{font-weight:600;font-size:15px;}
+  .drop-hint{color:var(--paper-dim);font-size:12.5px;margin-top:6px;}
+
+  .ocr-badge{
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--gold);
+    background:rgba(201,162,75,0.12); border-radius:6px; padding:2px 6px; margin-left:8px;
+  }
+  body.rtl .ocr-badge{ margin-left:0; margin-right:8px; }
+  .ocr-hint{
+    font-size:11.5px; color:var(--paper-dim); margin-top:8px; line-height:1.5;
+  }
+
+  .preview{display:none;flex-direction:column;gap:10px;margin-top:18px;}
+  .preview.show{display:flex;}
+  .preview-top{display:flex;align-items:center;gap:16px;}
+  .preview img{width:96px;height:auto;border-radius:8px;border:1px solid var(--hairline);}
+  .preview .meta{flex:1;font-size:13px;color:var(--paper-dim);}
+  .preview button.clear{
+    background:none;border:1px solid var(--hairline);color:var(--paper-dim);
+    border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:var(--f-body);
+  }
+  .preview button.clear:hover{color:var(--paper);border-color:#4A5062;}
+
+  .actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;align-items:center;}
+  .btn{
+    font-family:var(--f-body);
+    font-weight:600;
+    font-size:14px;
+    padding:13px 22px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    transition:transform .15s, opacity .15s;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-primary{background:var(--gold);color:#1B1406;}
+  .btn-primary:disabled{opacity:0.45;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--paper-dim);border:1px solid var(--hairline);}
+  .btn-ghost:hover{color:var(--paper);border-color:#4A5062;}
+  .btn-small{padding:8px 12px;font-size:12.5px;border-radius:8px;}
+
+  .status-line{font-size:13px;color:var(--paper-dim);margin-top:14px;font-family:'JetBrains Mono',monospace;min-height:18px;}
+  .status-line.err{color:#D98C6B;}
+
+  /* manual mode */
+  .manual{display:none;margin-top:22px;padding-top:22px;border-top:1px solid var(--hairline);}
+  .manual.show{display:block;}
+  .field-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .field-row label{font-size:12.5px;color:var(--paper-dim);min-width:110px;font-family:'JetBrains Mono',monospace;letter-spacing:0.03em;}
+  .field-row input[type=text]{
+    flex:1;min-width:160px;background:var(--surface-2);color:var(--paper);border:1px solid var(--hairline);
+    border-radius:8px;padding:9px 11px;font-family:var(--f-body);font-size:13.5px;
+  }
+  .metric-rows{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+  .metric-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .metric-row input[type=text]{
+    flex:1;min-width:180px;background:var(--surface-2);color:var(--paper);border:1px solid var(--hairline);
+    border-radius:8px;padding:9px 11px;font-family:var(--f-body);font-size:13.5px;
+  }
+  .status-picker{ position:relative; }
+  .status-picker-btn{
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface-2);color:var(--paper);border:1px solid var(--hairline);
+    border-radius:8px;padding:9px 12px;font-family:var(--f-body);font-size:13px;
+    cursor:pointer;min-width:150px;
+  }
+  .status-picker-btn:hover{border-color:#4A5062;}
+  .status-picker .picker-caret{ margin-left:auto; color:var(--paper-dim); font-size:10px; }
+  body.rtl .status-picker .picker-caret{ margin-left:0; margin-right:auto; }
+  .status-icon{
+    width:18px;height:18px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;line-height:1;font-weight:700;
+  }
+  .status-icon.very_good{ background:var(--good); color:#0E2A1D; }
+  .status-icon.good{ background:transparent; border:1.5px solid var(--good); color:var(--good); }
+  .status-icon.bad{ background:var(--bad); color:#1B1D22; }
+  .status-picker-menu{
+    display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:20;
+    background:var(--surface-2); border:1px solid var(--hairline); border-radius:10px;
+    padding:5px; min-width:180px; box-shadow:var(--shadow);
+  }
+  body.rtl .status-picker-menu{ left:auto; right:0; }
+  .status-picker.open .status-picker-menu{ display:block; }
+  .status-picker-option{
+    display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:7px;
+    font-size:13px;cursor:pointer;
+  }
+  .status-picker-option:hover{ background:rgba(255,255,255,0.05); }
+  .row-remove{
+    background:transparent;border:1px solid var(--hairline);color:var(--paper-dim);
+    border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px;line-height:1;
+  }
+  .row-remove:hover{color:#D98C6B;border-color:#D98C6B;}
+
+  /* ---------- Pillars ---------- */
+  .pillars-hall{display:none;}
+  .pillars-hall.show{display:block;}
+  .hall-title{
+    text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.15em;
+    text-transform:uppercase;color:var(--paper-dim);margin-bottom:28px;
+  }
+  .hall-title .plat{color:var(--gold);}
+
+  .colonnade{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:22px;
+    margin-bottom:10px;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+  }
+  .card-stage{
+    height:140px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent 60%);
+    position:relative;
+  }
+  .badge{
+    position:absolute;top:14px;right:14px;
+    display:flex;align-items:center;gap:6px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;letter-spacing:0.06em;text-transform:uppercase;
+    padding:5px 9px;border-radius:20px;
+    border:1px solid var(--hairline);
+    background:rgba(0,0,0,0.25);
+  }
+  body.rtl .badge{ right:auto; left:14px; }
+  .badge .dot{width:7px;height:7px;border-radius:50%;}
+
+  .card-body{padding:20px 22px 24px;flex:1;display:flex;flex-direction:column;gap:13px;}
+  .metric-name{font-family:var(--f-display);font-weight:600;font-size:18px;}
+  .metric-value{font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;}
+  .block{font-size:13px;line-height:1.55;color:#D6D2C6;}
+  .block .lbl{
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--paper-dim);display:block;margin-bottom:4px;
+  }
+
+  .legend{
+    display:flex;gap:20px;flex-wrap:wrap;justify-content:center;
+    margin:30px 0 6px;padding-top:24px;border-top:1px solid var(--hairline);
+    font-size:12px;color:var(--paper-dim);
+  }
+  .legend span{display:inline-flex;align-items:center;gap:7px;}
+  .legend .dot{width:9px;height:9px;border-radius:50%;}
+  footer{text-align:center;margin-top:50px;color:#565C6B;font-size:11.5px;font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <rect width="26" height="26" rx="7" fill="var(--gold)"/>
+      <path d="M6 17.5 L10.5 10 L14 15 L20 6.5" stroke="#1B1406" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <circle cx="20" cy="6.5" r="2" fill="#1B1406"/>
+    </svg>
+    <span class="brand-name">VidMetric</span>
+  </div>
+  <div class="topbar-right">
+    <div class="signin" id="signinArea">
+      <div id="gsiButton"></div>
+      <div class="user-chip" id="userChip" style="display:none">
+        <img id="userAvatar" alt="">
+        <span id="userName"></span>
+        <button id="signOutBtn" title="Sign out">×</button>
+      </div>
+    </div>
+    <div class="langbar">
+      <button data-lang="de">DE</button>
+      <button data-lang="en">EN</button>
+      <button data-lang="fr">FR</button>
+      <button data-lang="es">ES</button>
+      <button data-lang="it">IT</button>
+      <button data-lang="ar">AR</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow" data-i18n="eyebrow"></div>
+    <h1 data-i18n="title"></h1>
+    <p class="greeting" id="greetingLine" style="display:none"></p>
+    <p class="sub" data-i18n="subtitle"></p>
+  </div>
+
+  <div class="guide">
+    <div class="guide-title" data-i18n="guideTitle"></div>
+    <div class="guide-grid">
+      <div class="guide-card">
+        <div class="mock mock-pc">
+          <div class="mock-chrome"><span></span><span></span><span></span></div>
+          <div class="mock-body">
+            <div class="mock-video">
+              <div class="mock-video-thumb">▶</div>
+              <div class="mock-video-title">
+                <span class="mock-line w85"></span>
+                <span class="mock-line w55"></span>
+              </div>
+            </div>
+            <div class="mock-tag">YouTube Studio</div>
+            <div class="mock-row"><span>Aufrufe</span><b>1.391</b><i class="dot good"></i></div>
+            <div class="mock-row"><span>Klickrate</span><b>10,1 %</b><i class="dot verygood"></i></div>
+            <div class="mock-row"><span>Wiedergabedauer</span><b>1:11</b><i class="dot bad"></i></div>
+          </div>
+        </div>
+        <div class="guide-caption" data-i18n="guidePc"></div>
+      </div>
+      <div class="guide-card">
+        <div class="mock mock-phone">
+          <div class="mock-notch"></div>
+          <div class="mock-body">
+            <div class="mock-video">
+              <div class="mock-video-thumb">▶</div>
+              <div class="mock-video-title">
+                <span class="mock-line w85"></span>
+                <span class="mock-line w55"></span>
+              </div>
+            </div>
+            <div class="mock-tag">YouTube Studio</div>
+            <div class="mock-row"><span>Aufrufe</span><b>1.075</b><i class="dot bad"></i></div>
+            <div class="mock-row"><span>Klickrate</span><b>5,6 %</b><i class="dot bad"></i></div>
+            <div class="mock-row"><span>Wiedergabedauer</span><b>0:50</b><i class="dot bad"></i></div>
+          </div>
+        </div>
+        <div class="guide-caption" data-i18n="guideMobileFeed"></div>
+      </div>
+      <div class="guide-card">
+        <div class="mock mock-phone">
+          <div class="mock-notch"></div>
+          <div class="mock-body mock-tap">
+            <div class="mock-video">
+              <div class="mock-video-thumb"><span class="tap-hint">👆</span></div>
+              <div class="mock-video-title">
+                <span class="mock-line w85"></span>
+                <span class="mock-line w55"></span>
+              </div>
+            </div>
+            <div class="mock-taptext" data-i18n="guideTapHint"></div>
+          </div>
+        </div>
+        <div class="guide-caption" data-i18n="guideMobileTap"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <label class="drop" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="drop-icon">⤴</div>
+      <div class="drop-title" data-i18n="dropTitle"></div>
+      <div class="drop-hint" data-i18n="dropHint"></div>
+    </label>
+
+    <div class="preview" id="preview">
+      <div class="preview-top">
+        <div class="preview-frame">
+          <img id="previewImg" alt="preview">
+          <div class="scanline" id="scanline"></div>
+        </div>
+        <div class="meta" id="previewMeta"></div>
+        <button class="clear" id="clearBtn" data-i18n="remove"></button>
+      </div>
+      <div class="ocr-hint" data-i18n="ocrHint"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="analyzeBtn" data-i18n="analyzeBtn" disabled></button>
+      <button class="btn btn-ghost" id="manualToggle" data-i18n="manualToggle"></button>
+    </div>
+    <div class="status-line" id="statusLine"></div>
+
+    <div class="manual" id="manualPanel">
+      <div class="metric-rows" id="metricRows"></div>
+      <button class="btn btn-primary" id="manualRun" data-i18n="generateBtn" style="margin-top:6px;"></button>
+    </div>
+  </div>
+
+  <div class="pillars-hall" id="hall">
+    <div class="hall-title"><span data-i18n="diagnosis"></span></div>
+    <div class="colonnade" id="colonnade"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--good)"></span><span data-i18n="legendGood"></span></span>
+      <span><span class="dot" style="background:var(--good-dim)"></span><span data-i18n="legendOk"></span></span>
+      <span><span class="dot" style="background:var(--bad)"></span><span data-i18n="legendBad"></span></span>
+    </div>
+  </div>
+
+  <footer data-i18n="footer"></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+/* ---------------- i18n (UI strings only) ---------------- */
+const I18N = {
+  de: {
+    eyebrow:"YouTube Video Analytics",
+    title:"VidMetric",
+    subtitle:"Lade einen Screenshot deiner YouTube-Studio-Videostatistiken hoch. Wir prüfen automatisch Aufrufe, Klickrate und Wiedergabedauer und zeigen dir sofort Ursache und Lösung. Aktuell werden ausschließlich YouTube-Screenshots ausgewertet.",
+    guideTitle:"So sollte dein Screenshot aussehen",
+    guidePc:"PC: die Karte „Leistung des neuesten Videos” im YouTube-Studio-Dashboard.",
+    guideMobileFeed:"Handy, erste Stunden: die Karte erscheint direkt im YouTube-Studio-Feed.",
+    guideMobileTap:"Handy, nach 1 Tag: erst auf das Video tippen, dann erscheinen die Werte.",
+    guideTapHint:"Video antippen",
+    dropTitle:"Screenshot hierher ziehen oder klicken",
+    dropHint:"PNG oder JPG · YouTube-Studio-Screenshot",
+    ocrHint:"Falls die Analyse nicht klappt (z. B. wegen fehlender Internetverbindung), kannst du die Werte auch manuell eingeben.",
+    remove:"Entfernen",
+    analyzeBtn:"Bild analysieren",
+    manualToggle:"Manuellen Testmodus öffnen",
+    generateBtn:"Diagnose anzeigen",
+    diagnosis:"Diagnose",
+    legendGood:"↑ Sehr gut — so weitermachen",
+    legendOk:"✓ Gut — Luft nach oben",
+    legendBad:"↓ Braucht Arbeit — Lösung umsetzen",
+    footer:"VIDMETRIC · YOUTUBE-VIDEOANALYSE",
+    reading:"Befund",
+    cause:"Ursache",
+    solution:"Lösung",
+    statusReadingSteps:["Screenshot wird analysiert…","Werte werden erkannt…","Diagnose wird vorbereitet…"],
+    statusDone:"Fertig — Diagnose abgeschlossen.",
+    statusErr:"Bild konnte nicht automatisch gelesen werden. Versuche den manuellen Testmodus.",
+    veryGood:"Sehr gut",
+    good:"Gut",
+    bad:"Braucht Arbeit",
+    optVeryGood:"Sehr gut ↑",
+    optGood:"Gut ✓",
+    optBad:"Braucht Arbeit ↓",
+    greeting:"Hallo, {name} 👋"
+  },
+  en: {
+    eyebrow:"YouTube Video Analytics",
+    title:"VidMetric",
+    subtitle:"Upload a screenshot of your YouTube Studio video stats. We automatically check views, click-through rate, and watch time, and show you the cause and fix right away. Currently only YouTube screenshots are supported.",
+    guideTitle:"What your screenshot should look like",
+    guidePc:"PC: the “Latest video performance” card on the YouTube Studio dashboard.",
+    guideMobileFeed:"Mobile, first hours: the card appears right in the YouTube Studio feed.",
+    guideMobileTap:"Mobile, after 1 day: tap the video first, then the values appear.",
+    guideTapHint:"Tap the video",
+    dropTitle:"Drop a screenshot, or click to browse",
+    dropHint:"PNG or JPG · YouTube Studio screenshot",
+    ocrHint:"If the analysis doesn't work (e.g. due to no internet connection), you can also enter the values manually.",
+    remove:"Remove",
+    analyzeBtn:"Analyze image",
+    manualToggle:"Try manual test mode",
+    generateBtn:"Show diagnosis",
+    diagnosis:"Diagnosis",
+    legendGood:"↑ Very good — keep doing this",
+    legendOk:"✓ Good — room to improve",
+    legendBad:"↓ Needs work — act on the fix",
+    footer:"VIDMETRIC · YOUTUBE VIDEO ANALYTICS",
+    reading:"Reading",
+    cause:"Cause",
+    solution:"Fix",
+    statusReadingSteps:["Analyzing screenshot…","Detecting values…","Preparing diagnosis…"],
+    statusDone:"Done — diagnosis complete.",
+    statusErr:"Could not read the image automatically. Try manual test mode.",
+    veryGood:"Very good",
+    good:"Good",
+    bad:"Needs work",
+    optVeryGood:"Very good ↑",
+    optGood:"Good ✓",
+    optBad:"Needs work ↓",
+    greeting:"Hi, {name} 👋"
+  },
+  fr: {
+    eyebrow:"Analyse vidéo YouTube",
+    title:"VidMetric",
+    subtitle:"Téléverse une capture d'écran de tes statistiques vidéo YouTube Studio. Nous vérifions automatiquement les vues, le taux de clics et la durée de visionnage, et t'indiquons aussitôt la cause et la solution. Seules les captures YouTube sont actuellement prises en charge.",
+    guideTitle:"À quoi doit ressembler ta capture d'écran",
+    guidePc:"PC : la carte « Performance de la dernière vidéo » sur le tableau de bord YouTube Studio.",
+    guideMobileFeed:"Mobile, premières heures : la carte apparaît directement dans le fil YouTube Studio.",
+    guideMobileTap:"Mobile, après 1 jour : touche d'abord la vidéo, puis les valeurs apparaissent.",
+    guideTapHint:"Touche la vidéo",
+    dropTitle:"Dépose une capture d'écran ici, ou clique pour parcourir",
+    dropHint:"PNG ou JPG · capture d'écran YouTube Studio",
+    ocrHint:"Si l'analyse ne fonctionne pas (par ex. en cas d'absence de connexion internet), tu peux aussi saisir les valeurs manuellement.",
+    remove:"Supprimer",
+    analyzeBtn:"Analyser l'image",
+    manualToggle:"Essayer le mode de test manuel",
+    generateBtn:"Afficher le diagnostic",
+    diagnosis:"Diagnostic",
+    legendGood:"↑ Très bien — continue comme ça",
+    legendOk:"✓ Bien — encore de la marge",
+    legendBad:"↓ À améliorer — applique la solution",
+    footer:"VIDMETRIC · ANALYSE VIDÉO YOUTUBE",
+    reading:"Constat",
+    cause:"Cause",
+    solution:"Solution",
+    statusReadingSteps:["Analyse de la capture d'écran…","Détection des valeurs…","Préparation du diagnostic…"],
+    statusDone:"Terminé — diagnostic complet.",
+    statusErr:"Impossible de lire l'image automatiquement. Essaie le mode de test manuel.",
+    veryGood:"Très bien",
+    good:"Bien",
+    bad:"À améliorer",
+    optVeryGood:"Très bien ↑",
+    optGood:"Bien ✓",
+    optBad:"À améliorer ↓",
+    greeting:"Salut, {name} 👋"
+  },
+  es: {
+    eyebrow:"Análisis de video de YouTube",
+    title:"VidMetric",
+    subtitle:"Sube una captura de pantalla de tus estadísticas de video de YouTube Studio. Comprobamos automáticamente las visualizaciones, la tasa de clics y el tiempo de visualización, y te mostramos al instante la causa y la solución. Actualmente solo se admiten capturas de YouTube.",
+    guideTitle:"Cómo debe verse tu captura de pantalla",
+    guidePc:"PC: la tarjeta «Rendimiento del video más reciente» en el panel de YouTube Studio.",
+    guideMobileFeed:"Móvil, primeras horas: la tarjeta aparece directamente en el feed de YouTube Studio.",
+    guideMobileTap:"Móvil, después de 1 día: toca primero el video y luego aparecerán los valores.",
+    guideTapHint:"Toca el video",
+    dropTitle:"Suelta una captura de pantalla aquí, o haz clic para buscar",
+    dropHint:"PNG o JPG · captura de pantalla de YouTube Studio",
+    ocrHint:"Si el análisis no funciona (por ejemplo, por falta de conexión a internet), también puedes introducir los valores manualmente.",
+    remove:"Quitar",
+    analyzeBtn:"Analizar imagen",
+    manualToggle:"Probar el modo de prueba manual",
+    generateBtn:"Mostrar diagnóstico",
+    diagnosis:"Diagnóstico",
+    legendGood:"↑ Muy bien — sigue así",
+    legendOk:"✓ Bien — hay margen de mejora",
+    legendBad:"↓ Necesita mejorar — aplica la solución",
+    footer:"VIDMETRIC · ANÁLISIS DE VIDEO DE YOUTUBE",
+    reading:"Lectura",
+    cause:"Causa",
+    solution:"Solución",
+    statusReadingSteps:["Analizando la captura de pantalla…","Detectando valores…","Preparando el diagnóstico…"],
+    statusDone:"Listo — diagnóstico completo.",
+    statusErr:"No se pudo leer la imagen automáticamente. Prueba el modo de prueba manual.",
+    veryGood:"Muy bien",
+    good:"Bien",
+    bad:"Necesita mejorar",
+    optVeryGood:"Muy bien ↑",
+    optGood:"Bien ✓",
+    optBad:"Necesita mejorar ↓",
+    greeting:"Hola, {name} 👋"
+  },
+  it: {
+    eyebrow:"Analisi video YouTube",
+    title:"VidMetric",
+    subtitle:"Carica uno screenshot delle tue statistiche video di YouTube Studio. Controlliamo automaticamente visualizzazioni, tasso di clic e tempo di visualizzazione, e ti mostriamo subito causa e soluzione. Al momento sono supportati solo screenshot di YouTube.",
+    guideTitle:"Come dovrebbe apparire il tuo screenshot",
+    guidePc:"PC: la scheda «Andamento del video più recente» nella dashboard di YouTube Studio.",
+    guideMobileFeed:"Cellulare, prime ore: la scheda appare direttamente nel feed di YouTube Studio.",
+    guideMobileTap:"Cellulare, dopo 1 giorno: tocca prima il video, poi compaiono i valori.",
+    guideTapHint:"Tocca il video",
+    dropTitle:"Trascina qui uno screenshot, oppure clicca per sfogliare",
+    dropHint:"PNG o JPG · screenshot di YouTube Studio",
+    ocrHint:"Se l'analisi non funziona (ad esempio per mancanza di connessione internet), puoi anche inserire i valori manualmente.",
+    remove:"Rimuovi",
+    analyzeBtn:"Analizza immagine",
+    manualToggle:"Prova la modalità di test manuale",
+    generateBtn:"Mostra diagnosi",
+    diagnosis:"Diagnosi",
+    legendGood:"↑ Molto bene — continua così",
+    legendOk:"✓ Bene — c'è margine di miglioramento",
+    legendBad:"↓ Da migliorare — applica la soluzione",
+    footer:"VIDMETRIC · ANALISI VIDEO YOUTUBE",
+    reading:"Lettura",
+    cause:"Causa",
+    solution:"Soluzione",
+    statusReadingSteps:["Analisi dello screenshot…","Rilevamento dei valori…","Preparazione della diagnosi…"],
+    statusDone:"Fatto — diagnosi completata.",
+    statusErr:"Impossibile leggere automaticamente l'immagine. Prova la modalità di test manuale.",
+    veryGood:"Molto bene",
+    good:"Bene",
+    bad:"Da migliorare",
+    optVeryGood:"Molto bene ↑",
+    optGood:"Bene ✓",
+    optBad:"Da migliorare ↓",
+    greeting:"Ciao, {name} 👋"
+  },
+  ar: {
+    eyebrow:"تحليلات فيديو يوتيوب",
+    title:"VidMetric",
+    subtitle:"ارفع لقطة شاشة لإحصائيات الفيديو من يوتيوب ستوديو. نتحقق تلقائيًا من المشاهدات، معدل النقر، ومدة المشاهدة، ونعرض لك فورًا السبب والحل. حاليًا تُدعم فقط لقطات شاشة من يوتيوب.",
+    guideTitle:"كيف يجب أن تبدو لقطة الشاشة",
+    guidePc:"الكمبيوتر: بطاقة «أداء أحدث فيديو» في لوحة تحكم يوتيوب ستوديو.",
+    guideMobileFeed:"الهاتف، الساعات الأولى: تظهر البطاقة مباشرة في خلاصة يوتيوب ستوديو.",
+    guideMobileTap:"الهاتف، بعد يوم واحد: اضغط على الفيديو أولاً، ثم تظهر القيم.",
+    guideTapHint:"اضغط على الفيديو",
+    dropTitle:"أفلت لقطة شاشة هنا أو انقر للاختيار",
+    dropHint:"PNG أو JPG · لقطة شاشة من يوتيوب ستوديو",
+    ocrHint:"إذا لم يعمل التحليل (مثلاً بسبب انقطاع الإنترنت)، يمكنك أيضًا إدخال القيم يدويًا.",
+    remove:"إزالة",
+    analyzeBtn:"تحليل الصورة",
+    manualToggle:"تجربة الوضع اليدوي",
+    generateBtn:"عرض التشخيص",
+    diagnosis:"التشخيص",
+    legendGood:"↑ ممتاز — استمر هكذا",
+    legendOk:"✓ جيد — هناك مجال للتحسّن",
+    legendBad:"↓ يحتاج تحسين — طبّق الحل",
+    footer:"VIDMETRIC · تحليلات فيديو يوتيوب",
+    reading:"القراءة",
+    cause:"السبب",
+    solution:"الحل",
+    statusReadingSteps:["جارٍ تحليل لقطة الشاشة…","جارٍ التعرّف على القيم…","جارٍ إعداد التشخيص…"],
+    statusDone:"تم — اكتمل التشخيص.",
+    statusErr:"تعذّرت قراءة الصورة تلقائيًا. جرّب الوضع اليدوي.",
+    veryGood:"ممتاز",
+    good:"جيد",
+    bad:"يحتاج تحسين",
+    optVeryGood:"ممتاز ↑",
+    optGood:"جيد ✓",
+    optBad:"يحتاج تحسين ↓",
+    greeting:"مرحبًا، {name} 👋"
+  }
+};
+
+/* ---------------- FIXED ANSWER BANK ----------------
+   This is the "your experience, hard-coded" part. Edit the text
+   below to change what the tool says — nothing here is generated
+   by the model. Only value/status extraction from the image uses AI. */
+const METRICS = {
+  views: {
+    name: { de:"Aufrufe", en:"Views", fr:"Vues", es:"Visualizaciones", it:"Visualizzazioni", ar:"المشاهدات" },
+    content: {
+      very_good: {
+        reading:{ de:"Die Aufrufe wachsen deutlich schneller als üblich.", en:"Views are growing markedly faster than usual.", fr:"Les vues augmentent nettement plus vite que d'habitude.", es:"Las visualizaciones están creciendo notablemente más rápido de lo habitual.", it:"Le visualizzazioni stanno crescendo decisamente più velocemente del solito.", ar:"المشاهدات تنمو أسرع بكثير من المعتاد." },
+        cause:{ de:"Starkes Upload-Timing und ein auffälliges Thumbnail ziehen Zuschauer an.", en:"Strong upload timing and an eye-catching thumbnail are pulling viewers in.", fr:"Un bon moment de publication et une miniature accrocheuse attirent les spectateurs.", es:"Un buen momento de publicación y una miniatura llamativa atraen a los espectadores.", it:"Un buon orario di pubblicazione e una miniatura accattivante attirano gli spettatori.", ar:"توقيت نشر قوي وغلاف جذاب يجذبان المشاهدين." },
+        solution:{ de:"Nichts ändern — Upload-Zeit und Thumbnail-Stil genauso beibehalten.", en:"Don't change anything — keep this exact upload time and thumbnail style.", fr:"Ne change rien — garde exactement cet horaire de publication et ce style de miniature.", es:"No cambies nada — mantén exactamente este horario de publicación y este estilo de miniatura.", it:"Non cambiare nulla — mantieni esattamente questo orario di pubblicazione e questo stile di miniatura.", ar:"لا تغيّر شيئًا — حافظ على وقت النشر وأسلوب الغلاف نفسه." }
+      },
+      /* Views is a downstream result of CTR (thumbnail/title) and watch time (retention).
+         So instead of a fixed text, we point to whichever is actually the bottleneck.
+         If BOTH are weak, there is no priority — both must be fixed. */
+      good: {
+        watchtime: {
+          reading:{ de:"Die Aufrufe sind solide, aber die Wiedergabedauer bremst weiteres Wachstum.", en:"Views are solid, but watch time is holding back further growth.", fr:"Les vues sont solides, mais la durée de visionnage freine la croissance.", es:"Las visualizaciones son sólidas, pero el tiempo de visualización frena el crecimiento.", it:"Le visualizzazioni sono solide, ma il tempo di visualizzazione frena la crescita.", ar:"المشاهدات جيدة، لكن مدة المشاهدة تعيق مزيدًا من النمو." },
+          cause:{ de:"Die Klickrate ist bereits stark — der eigentliche Flaschenhals ist die Wiedergabedauer: Zuschauer bleiben nicht lange genug, wodurch YouTube das Video seltener empfiehlt.", en:"Click-through rate is already strong — the real bottleneck is watch time: viewers aren't staying long enough, so YouTube recommends the video less often.", fr:"Le taux de clics est déjà élevé — le vrai goulot d'étranglement est la durée de visionnage : les spectateurs ne restent pas assez longtemps, donc YouTube recommande moins la vidéo.", es:"La tasa de clics ya es alta — el verdadero cuello de botella es el tiempo de visualización: los espectadores no se quedan el tiempo suficiente, por lo que YouTube recomienda menos el video.", it:"Il tasso di clic è già elevato — il vero collo di bottiglia è il tempo di visualizzazione: gli spettatori non rimangono abbastanza a lungo, quindi YouTube consiglia meno il video.", ar:"معدل النقر قوي بالفعل — العائق الحقيقي هو مدة المشاهدة: لا يبقى المشاهدون لفترة كافية، لذا يوصي يوتيوب بالفيديو بشكل أقل." },
+          solution:{ de:"Verbessere zuerst die Wiedergabedauer (siehe Karte unten) — bessere Retention führt automatisch zu mehr Empfehlungen und Aufrufen. Am Thumbnail musst du nichts ändern.", en:"Fix watch time first (see the card below) — better retention automatically leads to more recommendations and more views. No need to touch the thumbnail.", fr:"Corrige d'abord la durée de visionnage (voir la carte ci-dessous) — une meilleure rétention entraîne automatiquement plus de recommandations et de vues. Pas besoin de toucher à la miniature.", es:"Corrige primero el tiempo de visualización (ver la tarjeta de abajo) — una mejor retención genera automáticamente más recomendaciones y visualizaciones. No hace falta tocar la miniatura.", it:"Correggi prima il tempo di visualizzazione (vedi la scheda qui sotto) — una migliore fidelizzazione porta automaticamente a più consigliati e visualizzazioni. Non serve toccare la miniatura.", ar:"أصلح مدة المشاهدة أولًا (انظر البطاقة أدناه) — تحسّن الاحتفاظ يؤدي تلقائيًا إلى مزيد من التوصيات والمشاهدات. لا داعي لتغيير الغلاف." }
+        },
+        ctr: {
+          reading:{ de:"Die Aufrufe sind solide, aber die Klickrate bremst weiteres Wachstum.", en:"Views are solid, but click-through rate is holding back further growth.", fr:"Les vues sont solides, mais le taux de clics freine la croissance.", es:"Las visualizaciones son sólidas, pero la tasa de clics frena el crecimiento.", it:"Le visualizzazioni sono solide, ma il tasso di clic frena un'ulteriore crescita.", ar:"المشاهدات جيدة، لكن معدل النقر يعيق مزيدًا من النمو." },
+          cause:{ de:"Die Wiedergabedauer ist bereits gut — der Flaschenhals ist die Klickrate: Zu wenige Impressionen werden in Klicks umgewandelt.", en:"Watch time is already good — the bottleneck is click-through rate: too few impressions are converting into clicks.", fr:"La durée de visionnage est déjà bonne — le goulot d'étranglement est le taux de clics : trop peu d'impressions se transforment en clics.", es:"El tiempo de visualización ya es bueno — el cuello de botella es la tasa de clics: muy pocas impresiones se convierten en clics.", it:"Il tempo di visualizzazione è già buono — il collo di bottiglia è il tasso di clic: troppo poche impressioni si convertono in clic.", ar:"مدة المشاهدة جيدة بالفعل — العائق هو معدل النقر: عدد قليل جدًا من الظهور يتحول إلى نقرات." },
+          solution:{ de:"Verbessere zuerst Thumbnail und Titel (siehe Karte unten) — mehr Klicks bei gleicher Reichweite bedeuten direkt mehr Aufrufe.", en:"Fix the thumbnail and title first (see the card below) — more clicks at the same reach directly means more views.", fr:"Corrige d'abord la miniature et le titre (voir la carte ci-dessous) — plus de clics pour la même portée signifie directement plus de vues.", es:"Corrige primero la miniatura y el título (ver la tarjeta de abajo) — más clics con el mismo alcance significa directamente más visualizaciones.", it:"Correggi prima la miniatura e il titolo (vedi la scheda qui sotto) — più clic con la stessa copertura significa direttamente più visualizzazioni.", ar:"أصلح الغلاف والعنوان أولًا (انظر البطاقة أدناه) — مزيد من النقرات بنفس الوصول يعني مباشرة مزيدًا من المشاهدات." }
+        },
+        both: {
+          reading:{ de:"Die Aufrufe sind solide, aber sowohl Klickrate als auch Wiedergabedauer bremsen weiteres Wachstum.", en:"Views are solid, but both click-through rate and watch time are holding back further growth.", fr:"Les vues sont solides, mais le taux de clics et la durée de visionnage freinent tous les deux la croissance.", es:"Las visualizaciones son sólidas, pero tanto la tasa de clics como el tiempo de visualización frenan el crecimiento.", it:"Le visualizzazioni sono solide, ma sia il tasso di clic sia il tempo di visualizzazione frenano la crescita.", ar:"المشاهدات جيدة، لكن كلًا من معدل النقر ومدة المشاهدة يعيقان مزيدًا من النمو." },
+          cause:{ de:"Zwei Bremsen gleichzeitig: zu wenige Klicks auf das Video, und die Zuschauer, die klicken, bleiben nicht lange genug.", en:"Two brakes at once: too few clicks on the video, and the viewers who do click aren't staying long enough.", fr:"Deux freins à la fois : trop peu de clics sur la vidéo, et les spectateurs qui cliquent ne restent pas assez longtemps.", es:"Dos frenos a la vez: muy pocos clics en el video, y los espectadores que sí hacen clic no se quedan el tiempo suficiente.", it:"Due freni contemporaneamente: troppo pochi clic sul video, e chi clicca non rimane abbastanza a lungo.", ar:"كابحان في آن واحد: نقرات قليلة جدًا على الفيديو، والمشاهدون الذين ينقرون لا يبقون طويلاً بما يكفي." },
+          solution:{ de:"Es gibt hier keine Priorität — beide müssen korrigiert werden. Verbessere zuerst Thumbnail und Titel (siehe Karte unten), das wirkt oft am schnellsten. Prüfe danach erneut die Wiedergabedauer (siehe Karte unten): nach der ersten Korrektur bessert sich meist ein Wert von selbst, der andere braucht oft trotzdem noch eine eigene Anpassung.", en:"There's no priority here — both need fixing. Start with the thumbnail and title (see the card below), that usually shows results fastest. Then check watch time again (see the card below): after the first fix, one metric often improves on its own, but the other usually still needs its own adjustment.", fr:"Il n'y a pas de priorité ici — les deux doivent être corrigés. Commence par la miniature et le titre (voir la carte ci-dessous), cela donne souvent des résultats plus rapidement. Vérifie ensuite à nouveau la durée de visionnage (voir la carte ci-dessous) : après la première correction, une des deux métriques s'améliore souvent d'elle-même, mais l'autre a généralement encore besoin de son propre ajustement.", es:"Aquí no hay prioridad — hay que corregir ambos. Empieza por la miniatura y el título (ver la tarjeta de abajo), suele dar resultados más rápido. Después vuelve a revisar el tiempo de visualización (ver la tarjeta de abajo): tras la primera corrección, una de las dos métricas suele mejorar sola, pero la otra normalmente todavía necesita su propio ajuste.", it:"Qui non c'è priorità — vanno corretti entrambi. Inizia con la miniatura e il titolo (vedi la scheda qui sotto), di solito dà risultati più rapidi. Poi controlla di nuovo il tempo di visualizzazione (vedi la scheda qui sotto): dopo la prima correzione, spesso una delle due metriche migliora da sola, ma l'altra di solito ha comunque bisogno di una propria modifica.", ar:"لا توجد أولوية هنا — يجب تصحيح كليهما. ابدأ بالغلاف والعنوان (انظر البطاقة أدناه)، فهذا عادة ما يُظهر نتائج أسرع. ثم تحقق مرة أخرى من مدة المشاهدة (انظر البطاقة أدناه): بعد التصحيح الأول، غالبًا ما يتحسن أحد المقياسين من تلقاء نفسه، لكن الآخر عادة ما يحتاج مع ذلك إلى تعديل خاص به." }
+        },
+        none: {
+          reading:{ de:"Die Aufrufe sind solide, aber es geht noch mehr.", en:"Views are solid, but there's more to get.", fr:"Les vues sont solides, mais il y a encore de la marge.", es:"Las visualizaciones son sólidas, pero hay margen para más.", it:"Le visualizzazioni sono solide, ma c'è ancora margine di crescita.", ar:"المشاهدات جيدة، لكن هناك مجال لمزيد من النمو." },
+          cause:{ de:"Klickrate und Wiedergabedauer sind bereits in Ordnung — die Bremse liegt eher an Reichweite oder Upload-Timing.", en:"Click-through rate and watch time are already fine — the brake is more likely reach or upload timing.", fr:"Le taux de clics et la durée de visionnage sont déjà corrects — le frein est plutôt la portée ou l'horaire de publication.", es:"La tasa de clics y el tiempo de visualización ya están bien — el freno es más probablemente el alcance o el horario de publicación.", it:"Il tasso di clic e il tempo di visualizzazione sono già ok — il freno è più probabilmente la copertura o l'orario di pubblicazione.", ar:"معدل النقر ومدة المشاهدة جيدان بالفعل — الكابح غالبًا هو الوصول أو توقيت النشر." },
+          solution:{ de:"Prüfe in YouTube Analytics → Zielgruppe, wann dein Publikum aktiv ist, und lade dann hoch. Erwäge zusätzliche Promotion (Community-Post, Shorts, Social Media), um mehr Reichweite zu bekommen.", en:"Check YouTube Analytics → Audience for when your viewers are active, and upload then. Consider extra promotion (community post, Shorts, social media) to boost reach.", fr:"Consulte YouTube Analytics → Audience pour savoir quand ton public est actif, et publie à ce moment-là. Envisage une promotion supplémentaire (post communautaire, Shorts, réseaux sociaux) pour augmenter la portée.", es:"Consulta YouTube Analytics → Audiencia para saber cuándo está activo tu público, y publica entonces. Considera una promoción adicional (publicación de la comunidad, Shorts, redes sociales) para aumentar el alcance.", it:"Controlla YouTube Analytics → Pubblico per sapere quando il tuo pubblico è attivo, e pubblica in quel momento. Valuta una promozione extra (post della community, Shorts, social media) per aumentare la copertura.", ar:"راجع تبويب الجمهور في يوتيوب أناليتكس لمعرفة أوقات نشاط المشاهدين، وانشر حينها. فكّر في ترويج إضافي (منشور مجتمعي، شورتس، وسائل التواصل) لزيادة الوصول." }
+        }
+      },
+      bad: {
+        watchtime: {
+          reading:{ de:"Die Aufrufe bleiben unter den Erwartungen — vor allem wegen der niedrigen Wiedergabedauer.", en:"Views are falling short of expectations — mainly because of low watch time.", fr:"Les vues restent en dessous des attentes — surtout à cause d'une faible durée de visionnage.", es:"Las visualizaciones están por debajo de lo esperado — principalmente por el bajo tiempo de visualización.", it:"Le visualizzazioni sono sotto le aspettative — soprattutto a causa del basso tempo di visualizzazione.", ar:"المشاهدات أقل من المتوقع — بشكل رئيسي بسبب انخفاض مدة المشاهدة." },
+          cause:{ de:"Die Klickrate ist in Ordnung, aber Zuschauer verlassen das Video zu früh, wodurch YouTube es kaum weiterempfiehlt.", en:"Click-through rate is fine, but viewers are leaving the video too early, so YouTube barely recommends it.", fr:"Le taux de clics est correct, mais les spectateurs quittent la vidéo trop tôt, donc YouTube la recommande à peine.", es:"La tasa de clics está bien, pero los espectadores abandonan el video demasiado pronto, por lo que YouTube apenas lo recomienda.", it:"Il tasso di clic va bene, ma gli spettatori abbandonano il video troppo presto, quindi YouTube lo consiglia a malapena.", ar:"معدل النقر جيد، لكن المشاهدين يغادرون الفيديو مبكرًا جدًا، لذا يوصي يوتيوب به نادرًا." },
+          solution:{ de:"Verbessere zuerst die Wiedergabedauer (siehe Karte unten) — das ist hier der größte Hebel für mehr Aufrufe, nicht das Thumbnail.", en:"Fix watch time first (see the card below) — that's the biggest lever for more views here, not the thumbnail.", fr:"Corrige d'abord la durée de visionnage (voir la carte ci-dessous) — c'est le levier le plus important pour plus de vues ici, pas la miniature.", es:"Corrige primero el tiempo de visualización (ver la tarjeta de abajo) — es la palanca más importante para más visualizaciones aquí, no la miniatura.", it:"Correggi prima il tempo di visualizzazione (vedi la scheda qui sotto) — è la leva più importante per più visualizzazioni qui, non la miniatura.", ar:"أصلح مدة المشاهدة أولًا (انظر البطاقة أدناه) — هذا هو أكبر رافعة لزيادة المشاهدات هنا، وليس الغلاف." }
+        },
+        ctr: {
+          reading:{ de:"Die Aufrufe bleiben unter den Erwartungen — vor allem wegen der niedrigen Klickrate.", en:"Views are falling short of expectations — mainly because of low click-through rate.", fr:"Les vues restent en dessous des attentes — surtout à cause d'un faible taux de clics.", es:"Las visualizaciones están por debajo de lo esperado — principalmente por la baja tasa de clics.", it:"Le visualizzazioni sono sotto le aspettative — soprattutto a causa del basso tasso di clic.", ar:"المشاهدات أقل من المتوقع — بشكل رئيسي بسبب انخفاض معدل النقر." },
+          cause:{ de:"Die Wiedergabedauer ist in Ordnung, aber zu wenige Zuschauer klicken das Video überhaupt an.", en:"Watch time is fine, but too few viewers are clicking the video at all.", fr:"La durée de visionnage est correcte, mais trop peu de spectateurs cliquent sur la vidéo.", es:"El tiempo de visualización está bien, pero muy pocos espectadores hacen clic en el video.", it:"Il tempo di visualizzazione va bene, ma troppo pochi spettatori cliccano sul video.", ar:"مدة المشاهدة جيدة، لكن عددًا قليلاً جدًا من المشاهدين ينقر على الفيديو أصلًا." },
+          solution:{ de:"Verbessere zuerst Thumbnail oder Titel (siehe Karte unten) — das ist hier der größte Hebel für mehr Aufrufe. Schau zusätzlich, ob deine Durchschnittliche Wiedergabedauer mit eine Ursache ist.", en:"Fix the thumbnail or title first (see the card below) — that's the biggest lever for more views here. Also check whether your average view duration is a contributing cause.", fr:"Corrige d'abord la miniature ou le titre (voir la carte ci-dessous) — c'est le levier le plus important pour plus de vues ici. Vérifie aussi si ta durée de visionnage moyenne y contribue.", es:"Corrige primero la miniatura o el título (ver la tarjeta de abajo) — es la palanca más importante para más visualizaciones aquí. Comprueba también si tu tiempo medio de visualización es una causa contribuyente.", it:"Correggi prima la miniatura o il titolo (vedi la scheda qui sotto) — è la leva più importante per più visualizzazioni qui. Controlla anche se la tua durata media di visualizzazione è una causa concorrente.", ar:"أصلح الغلاف أو العنوان أولًا (انظر البطاقة أدناه) — هذا هو أكبر رافعة لزيادة المشاهدات هنا. تحقق أيضًا مما إذا كان متوسط مدة المشاهدة سببًا مساهمًا." }
+        },
+        both: {
+          reading:{ de:"Die Aufrufe bleiben deutlich unter den Erwartungen — sowohl Klickrate als auch Wiedergabedauer sind schwach.", en:"Views are falling well short of expectations — both click-through rate and watch time are weak.", fr:"Les vues restent nettement en dessous des attentes — le taux de clics et la durée de visionnage sont tous deux faibles.", es:"Las visualizaciones están muy por debajo de lo esperado — tanto la tasa de clics como el tiempo de visualización son bajos.", it:"Le visualizzazioni sono decisamente sotto le aspettative — sia il tasso di clic sia il tempo di visualizzazione sono deboli.", ar:"المشاهدات أقل بكثير من المتوقع — كل من معدل النقر ومدة المشاهدة ضعيفان." },
+          cause:{ de:"Beide Haupttreiber für Aufrufe sind schwach: zu wenige Klicks aufs Video, und die, die klicken, bleiben nicht lange.", en:"Both main drivers of views are weak: too few clicks on the video, and the ones who do click don't stay long.", fr:"Les deux principaux moteurs des vues sont faibles : trop peu de clics sur la vidéo, et ceux qui cliquent ne restent pas longtemps.", es:"Los dos principales impulsores de las visualizaciones son débiles: muy pocos clics en el video, y quienes hacen clic no se quedan mucho tiempo.", it:"Entrambi i principali motori delle visualizzazioni sono deboli: troppo pochi clic sul video, e chi clicca non rimane a lungo.", ar:"كلا المحركين الرئيسيين للمشاهدات ضعيفان: نقرات قليلة جدًا على الفيديو، ومن ينقر لا يبقى طويلاً." },
+          solution:{ de:"Es gibt hier keine Priorität — beide Baustellen müssen korrigiert werden. Starte mit Thumbnail und Titel (siehe Karte unten) und danach mit der Wiedergabedauer (siehe Karte unten). Nach der ersten Korrektur bessert sich oft schon einer der beiden Werte von selbst — miss danach erneut nach, ob der andere trotzdem noch angepasst werden muss.", en:"There's no priority here — both issues need fixing. Start with the thumbnail and title (see the card below), then move on to watch time (see the card below). After the first fix, one of the two metrics often improves on its own — check again afterward to see if the other still needs adjusting.", fr:"Il n'y a pas de priorité ici — les deux problèmes doivent être corrigés. Commence par la miniature et le titre (voir la carte ci-dessous), puis passe à la durée de visionnage (voir la carte ci-dessous). Après la première correction, l'une des deux métriques s'améliore souvent d'elle-même — vérifie ensuite si l'autre a encore besoin d'un ajustement.", es:"Aquí no hay prioridad — hay que corregir ambos problemas. Empieza por la miniatura y el título (ver la tarjeta de abajo), y después pasa al tiempo de visualización (ver la tarjeta de abajo). Tras la primera corrección, una de las dos métricas suele mejorar sola — comprueba después si la otra todavía necesita ajuste.", it:"Qui non c'è priorità — entrambi i problemi vanno corretti. Inizia con la miniatura e il titolo (vedi la scheda qui sotto), poi passa al tempo di visualizzazione (vedi la scheda qui sotto). Dopo la prima correzione, spesso una delle due metriche migliora da sola — controlla di nuovo in seguito se l'altra ha comunque bisogno di una modifica.", ar:"لا توجد أولوية هنا — يجب تصحيح كلتا المشكلتين. ابدأ بالغلاف والعنوان (انظر البطاقة أدناه)، ثم انتقل إلى مدة المشاهدة (انظر البطاقة أدناه). بعد التصحيح الأول، غالبًا ما يتحسن أحد المقياسين من تلقاء نفسه — تحقق مرة أخرى بعد ذلك مما إذا كان الآخر ما زال بحاجة إلى تعديل." }
+        },
+        none: {
+          reading:{ de:"Die Aufrufe bleiben unter den Erwartungen, obwohl Klickrate und Wiedergabedauer stimmen.", en:"Views are falling short even though click-through rate and watch time are fine.", fr:"Les vues restent en dessous des attentes bien que le taux de clics et la durée de visionnage soient corrects.", es:"Las visualizaciones están por debajo de lo esperado aunque la tasa de clics y el tiempo de visualización estén bien.", it:"Le visualizzazioni sono sotto le aspettative anche se il tasso di clic e il tempo di visualizzazione vanno bene.", ar:"المشاهدات أقل من المتوقع رغم أن معدل النقر ومدة المشاهدة جيدان." },
+          cause:{ de:"Das Video bekommt trotz guter Werte zu wenig Reichweite — meist ein Timing- oder Sichtbarkeitsproblem.", en:"The video is getting too little reach despite good numbers — usually a timing or visibility issue.", fr:"La vidéo obtient trop peu de portée malgré de bons chiffres — généralement un problème de timing ou de visibilité.", es:"El video obtiene muy poco alcance a pesar de las buenas cifras — normalmente un problema de horario o visibilidad.", it:"Il video ottiene troppo poca copertura nonostante i buoni numeri — di solito un problema di tempistica o visibilità.", ar:"الفيديو يحصل على وصول قليل رغم الأرقام الجيدة — غالبًا مشكلة توقيت أو ظهور." },
+          solution:{ de:"Lade künftig zu den Spitzenzeiten deines Publikums hoch (YouTube Analytics → Zielgruppe) und promote das Video zusätzlich über Community-Post, Shorts oder Social Media.", en:"Upload during your audience's peak hours going forward (YouTube Analytics → Audience) and promote the video further via a community post, Shorts, or social media.", fr:"Publie désormais pendant les heures de pointe de ton audience (YouTube Analytics → Audience) et fais davantage la promotion de la vidéo via un post communautaire, des Shorts ou les réseaux sociaux.", es:"A partir de ahora, publica en las horas punta de tu audiencia (YouTube Analytics → Audiencia) y promociona más el video mediante una publicación de la comunidad, Shorts o redes sociales.", it:"D'ora in poi pubblica negli orari di punta del tuo pubblico (YouTube Analytics → Pubblico) e promuovi ulteriormente il video tramite un post della community, gli Shorts o i social media.", ar:"انشر مستقبلًا في أوقات ذروة جمهورك (يوتيوب أناليتكس → الجمهور) وروّج للفيديو أكثر عبر منشور مجتمعي أو شورتس أو وسائل التواصل." }
+        }
+      }
+    }
+  },
+  ctr: {
+    name: { de:"Klickrate der Impressionen", en:"Impressions click-through rate", fr:"Taux de clics sur les impressions", es:"Tasa de clics de impresiones", it:"Percentuale di clic sulle impressioni", ar:"معدل النقر إلى الظهور" },
+    content: {
+      very_good: {
+        reading:{ de:"Thumbnail und Titel wandeln Impressionen extrem gut in Klicks um.", en:"The thumbnail and title are converting impressions into clicks extremely well.", fr:"La miniature et le titre convertissent extrêmement bien les impressions en clics.", es:"La miniatura y el título convierten muy bien las impresiones en clics.", it:"La miniatura e il titolo convertono le impressioni in clic in modo estremamente efficace.", ar:"يحوّل الغلاف والعنوان الظهور إلى نقرات بشكل ممتاز." },
+        cause:{ de:"Das Thumbnail weckt starke Neugier im Moment des Sehens.", en:"The thumbnail creates strong curiosity the instant people see it.", fr:"La miniature suscite une forte curiosité dès qu'on la voit.", es:"La miniatura despierta mucha curiosidad en el instante en que se ve.", it:"La miniatura suscita una forte curiosità nel momento in cui viene vista.", ar:"يثير الغلاف فضولًا قويًا فور رؤيته." },
+        solution:{ de:"Nicht ändern — genau diesen Thumbnail-Stil beibehalten.", en:"Don't change it — keep this exact thumbnail style.", fr:"Ne change rien — garde exactement ce style de miniature.", es:"No lo cambies — mantén exactamente este estilo de miniatura.", it:"Non cambiarlo — mantieni esattamente questo stile di miniatura.", ar:"لا تغيّره — حافظ على أسلوب الغلاف نفسه." }
+      },
+      good: {
+        reading:{ de:"Ein ordentlicher Anteil der Zuschauer klickt, wenn sie das Video sehen.", en:"A decent share of viewers click when they see the video.", fr:"Une bonne part des spectateurs clique lorsqu'ils voient la vidéo.", es:"Una buena parte de los espectadores hace clic cuando ve el video.", it:"Una buona parte degli spettatori clicca quando vede il video.", ar:"نسبة معقولة من المشاهدين تنقر عند رؤية الفيديو." },
+        cause:{ de:"Thumbnail und Titel funktionieren, schöpfen die Neugier aber noch nicht voll aus.", en:"The thumbnail and title work, but aren't maximizing curiosity yet.", fr:"La miniature et le titre fonctionnent, mais n'exploitent pas encore toute la curiosité possible.", es:"La miniatura y el título funcionan, pero aún no explotan al máximo la curiosidad.", it:"La miniatura e il titolo funzionano, ma non sfruttano ancora al massimo la curiosità.", ar:"الغلاف والعنوان جيدان، لكنهما لا يثيران أقصى فضول بعد." },
+        solution:{ de:"Teste über die Thumbnail-Test-Funktion in YouTube Studio 2–3 mutigere Varianten von Thumbnail oder Titel. Erstelle dafür z. B. ein neues, auffälligeres Bild mit mehr Emotion, Kontrast oder einem klaren Blickfang, das noch mehr Neugier weckt. Du kannst dafür direkt ein Bild aus deinem Video auswählen ('Aus Video auswählen') oder über die A/B-Test-Funktion in YouTube Studio 3 verschiedene Thumbnails gegeneinander testen.", en:"Use YouTube Studio's thumbnail testing feature to A/B test 2–3 bolder thumbnail or title variants. For example, create a new, more eye-catching image with more emotion, contrast, or a clear focal point that sparks even more curiosity. You can pick a frame straight from your video ('Select from video') or use YouTube Studio's A/B testing feature to test 3 different thumbnails against each other.", fr:"Utilise la fonction de test de miniatures de YouTube Studio pour tester 2 à 3 variantes plus audacieuses de miniature ou de titre. Crée par exemple une nouvelle image plus accrocheuse, avec plus d'émotion, de contraste ou un point de focalisation clair qui suscite encore plus de curiosité. Tu peux choisir une image directement depuis ta vidéo ('Sélectionner depuis la vidéo') ou utiliser la fonction de test A/B de YouTube Studio pour comparer 3 miniatures différentes.", es:"Usa la función de prueba de miniaturas de YouTube Studio para probar 2–3 variantes más atrevidas de miniatura o título. Por ejemplo, crea una imagen nueva y más llamativa, con más emoción, contraste o un punto de atención claro que despierte aún más curiosidad. Puedes elegir una imagen directamente de tu video ('Seleccionar del video') o usar la función de prueba A/B de YouTube Studio para comparar 3 miniaturas diferentes.", it:"Usa la funzione di test delle miniature di YouTube Studio per testare 2–3 varianti più audaci di miniatura o titolo. Crea ad esempio una nuova immagine più accattivante, con più emozione, contrasto o un punto focale chiaro che susciti ancora più curiosità. Puoi scegliere un fotogramma direttamente dal tuo video ('Seleziona dal video') oppure usare la funzione di test A/B di YouTube Studio per confrontare 3 miniature diverse.", ar:"استخدم ميزة اختبار الصور المصغّرة في يوتيوب ستوديو لتجربة نسختين أو ثلاث أكثر جرأة من الغلاف أو العنوان. مثلاً، صمّم صورة جديدة أكثر جذبًا للانتباه، بمزيد من التعبير أو التباين أو نقطة تركيز واضحة تثير فضولًا أكبر. يمكنك اختيار صورة مباشرة من الفيديو (ميزة 'الاختيار من الفيديو') أو استخدام ميزة اختبار A/B في يوتيوب ستوديو لتجربة 3 صور مصغّرة مختلفة." }
+      },
+      bad: {
+        reading:{ de:"Nur wenige klicken, wenn sie das Video sehen.", en:"Few people click when they see the video.", fr:"Peu de personnes cliquent lorsqu'elles voient la vidéo.", es:"Pocas personas hacen clic cuando ven el video.", it:"Poche persone cliccano quando vedono il video.", ar:"عدد قليل ينقر عند رؤية الفيديو." },
+        cause:{ de:"Thumbnail oder Titel sind nicht überzeugend genug für den Klick.", en:"The thumbnail or title isn't compelling enough to earn the click.", fr:"La miniature ou le titre ne sont pas assez convaincants pour inciter au clic.", es:"La miniatura o el título no son lo suficientemente convincentes para conseguir el clic.", it:"La miniatura o il titolo non sono abbastanza convincenti da ottenere il clic.", ar:"الغلاف أو العنوان غير جذاب بما يكفي لدفع المشاهد للنقر." },
+        solution:{ de:"Erstelle ein neues Thumbnail mit hohem Kontrast und klarem Blickfang, und schreibe einen neugierweckenderen Titel — teste beides in YouTube Studio. Du kannst dafür ein Bild direkt aus deinem Video wählen ('Aus Video auswählen') oder mit der A/B-Test-Funktion 3 verschiedene Thumbnails gegeneinander testen.", en:"Design a new thumbnail with high contrast and a clear focal point, and write a more curiosity-driven title — test both in YouTube Studio. You can pick a frame straight from your video ('Select from video') or use the A/B testing feature to test 3 different thumbnails against each other.", fr:"Crée une nouvelle miniature avec un fort contraste et un point de focalisation clair, et rédige un titre suscitant davantage la curiosité — teste les deux dans YouTube Studio. Tu peux choisir une image directement depuis ta vidéo ('Sélectionner depuis la vidéo') ou utiliser la fonction de test A/B pour comparer 3 miniatures différentes.", es:"Crea una nueva miniatura con alto contraste y un punto de atención claro, y escribe un título que despierte más curiosidad — prueba ambos en YouTube Studio. Puedes elegir una imagen directamente de tu video ('Seleccionar del video') o usar la función de prueba A/B para comparar 3 miniaturas diferentes.", it:"Crea una nuova miniatura con alto contrasto e un punto focale chiaro, e scrivi un titolo che susciti più curiosità — testa entrambi in YouTube Studio. Puoi scegliere un fotogramma direttamente dal tuo video ('Seleziona dal video') oppure usare la funzione di test A/B per confrontare 3 miniature diverse.", ar:"صمّم غلافًا جديدًا بتباين عالٍ ونقطة تركيز واضحة، واكتب عنوانًا أكثر إثارة للفضول — واختبر الاثنين عبر يوتيوب ستوديو. يمكنك اختيار صورة مباشرة من الفيديو (ميزة 'الاختيار من الفيديو') أو استخدام ميزة اختبار A/B لتجربة 3 صور مصغّرة مختلفة." }
+      }
+    }
+  },
+  watchtime: {
+    name: { de:"Durchschnittliche Wiedergabedauer", en:"Average view duration", fr:"Durée de visionnage moyenne", es:"Duración media de visualización", it:"Durata media di visualizzazione", ar:"متوسط مدة التشغيل" },
+    content: {
+      very_good: {
+        reading:{ de:"Zuschauer schauen fast das gesamte Video.", en:"Viewers are watching almost the entire video.", fr:"Les spectateurs regardent presque toute la vidéo.", es:"Los espectadores ven casi todo el video.", it:"Gli spettatori guardano quasi tutto il video.", ar:"يشاهد الجمهور الفيديو بالكامل تقريبًا." },
+        cause:{ de:"Starkes Tempo und ein Einstieg, der von Anfang an fesselt.", en:"Strong pacing and an opening hook that grabs attention right away.", fr:"Un rythme soutenu et une accroche qui capte l'attention dès le début.", es:"Un ritmo fuerte y un gancho inicial que capta la atención de inmediato.", it:"Un ritmo sostenuto e un aggancio iniziale che cattura l'attenzione fin da subito.", ar:"إيقاع قوي وبداية تجذب الانتباه فورًا." },
+        solution:{ de:"Dieses Format und Erzähltempo beibehalten.", en:"Keep this format and pacing style.", fr:"Garde ce format et ce rythme narratif.", es:"Mantén este formato y este ritmo narrativo.", it:"Mantieni questo formato e questo ritmo narrativo.", ar:"حافظ على هذا التنسيق ووتيرة السرد نفسها." }
+      },
+      good: {
+        reading:{ de:"Die Wiedergabedauer ist solide, aber einige Zuschauer springen ab.", en:"Watch time is solid, but some viewers drop off partway through.", fr:"La durée de visionnage est solide, mais certains spectateurs décrochent en cours de route.", es:"El tiempo de visualización es sólido, pero algunos espectadores abandonan a mitad de camino.", it:"Il tempo di visualizzazione è solido, ma alcuni spettatori abbandonano a metà.", ar:"مدة المشاهدة جيدة، لكن بعض المشاهدين يغادرون في المنتصف." },
+        cause:{ de:"Der mittlere Teil des Videos verliert eventuell an Tempo.", en:"The middle section of the video may lose pace.", fr:"La partie centrale de la vidéo perd peut-être du rythme.", es:"La parte central del video podría perder ritmo.", it:"La parte centrale del video potrebbe perdere ritmo.", ar:"قد يفقد الجزء الأوسط من الفيديو إيقاعه." },
+        solution:{ de:"Schau, ob du langsame Passagen — vor allem in der Videomitte — im YouTube-Studio-Editor kürzen kannst, und halte die Energie über das ganze Video hinweg konstant.", en:"Check whether you can trim slow sections — especially in the middle of the video — using YouTube Studio's editor, and keep the energy consistent throughout.", fr:"Vérifie si tu peux couper les passages lents — surtout au milieu de la vidéo — avec l'éditeur de YouTube Studio, et maintiens une énergie constante tout au long de la vidéo.", es:"Comprueba si puedes recortar los pasajes lentos — sobre todo en la mitad del video — con el editor de YouTube Studio, y mantén la energía constante durante todo el video.", it:"Controlla se puoi tagliare i passaggi lenti — soprattutto nella parte centrale del video — con l'editor di YouTube Studio, e mantieni l'energia costante per tutto il video.", ar:"تحقق مما إذا كان بإمكانك قص المقاطع البطيئة — خاصة في منتصف الفيديو — باستخدام محرر يوتيوب ستوديو، وحافظ على طاقة ثابتة طوال الفيديو." }
+      },
+      bad: {
+        reading:{ de:"Zuschauer verlassen das Video früh.", en:"Viewers are leaving the video early.", fr:"Les spectateurs quittent la vidéo tôt.", es:"Los espectadores abandonan el video pronto.", it:"Gli spettatori abbandonano il video presto.", ar:"يغادر المشاهدون الفيديو مبكرًا." },
+        cause:{ de:"Zuschauer/Fans schauen nur kurz — meist weil das Video zu lang ist oder der Einstieg (erste 3–5 Sekunden) nicht fesselt.", en:"Viewers/fans are only watching briefly — usually because the video runs too long or the opening 3–5 seconds don't hook them.", fr:"Les spectateurs/fans ne regardent que brièvement — généralement parce que la vidéo est trop longue ou que les 3 à 5 premières secondes n'accrochent pas.", es:"Los espectadores/fans solo ven brevemente — normalmente porque el video es demasiado largo o los primeros 3–5 segundos no enganchan.", it:"Gli spettatori/fan guardano solo brevemente — di solito perché il video è troppo lungo o i primi 3–5 secondi non catturano l'attenzione.", ar:"يشاهد الجمهور/المتابعون لفترة قصيرة فقط — غالبًا لأن الفيديو طويل جدًا أو أن أول 3-5 ثوانٍ لا تجذب الانتباه." },
+        solution:{ de:"Schau, ob du Anfang und Ende des Videos im YouTube-Studio-Editor kürzen kannst, und arbeite zusätzlich künftig an einem stärkeren Einstieg sowie an interessanten Szenen etwa alle 20 Sekunden, die die Zuschauer wachhalten, interessieren und neugierig machen.", en:"Check whether you can trim the start and end of the video in YouTube Studio's editor, and going forward also work on a stronger opening plus an interesting beat roughly every 20 seconds that keeps viewers engaged, interested, and curious.", fr:"Vérifie si tu peux couper le début et la fin de la vidéo dans l'éditeur de YouTube Studio, et travaille aussi désormais sur une accroche plus forte ainsi que sur un moment intéressant environ toutes les 20 secondes, qui maintient les spectateurs attentifs, intéressés et curieux.", es:"Comprueba si puedes recortar el principio y el final del video en el editor de YouTube Studio, y trabaja además en el futuro en un inicio más fuerte y en un momento interesante aproximadamente cada 20 segundos que mantenga a los espectadores atentos, interesados y curiosos.", it:"Controlla se puoi tagliare l'inizio e la fine del video nell'editor di YouTube Studio, e lavora inoltre in futuro su un inizio più forte oltre a un momento interessante circa ogni 20 secondi che mantenga gli spettatori attenti, interessati e curiosi.", ar:"تحقق مما إذا كان بإمكانك تقصير بداية ونهاية الفيديو باستخدام محرر يوتيوب ستوديو، واعمل مستقبلًا أيضًا على بداية أقوى ومشاهد مثيرة للاهتمام كل 20 ثانية تقريبًا تُبقي المشاهد منتبهًا ومهتمًا وفضوليًا." }
+      }
+    }
+  }
+};
+
+const STATUS_META = {
+  very_good:{ color:"var(--good)", icon:"↑" },
+  good:     { color:"var(--good-dim)", icon:"✓" },
+  bad:      { color:"var(--bad)", icon:"↓" }
+};
+
+const ORDER = ['views','ctr','watchtime'];
+
+let currentLang = 'de';
+let lastResult = null; // { views:{value,status}, ctr:{...}, watchtime:{...} }
+
+function applyLang(lang){
+  currentLang = lang;
+  document.body.classList.toggle('rtl', lang === 'ar');
+  document.body.classList.toggle('lang-ar', lang === 'ar');
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (I18N[lang][key] !== undefined) el.textContent = I18N[lang][key];
+  });
+  document.querySelectorAll('.langbar button').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === lang);
+  });
+
+  buildMetricRows();
+  if (lastResult) renderPillars(lastResult);
+  if (currentUser) updateGreeting();
+}
+
+document.querySelectorAll('.langbar button').forEach(b => {
+  b.addEventListener('click', () => applyLang(b.dataset.lang));
+});
+
+/* ---------------- Google sign-in (client-side display only) ----------------
+   1) Create an OAuth Client ID at https://console.cloud.google.com/apis/credentials
+      (type: "Web application"), add your deployed domain under
+      "Authorized JavaScript origins", and paste the client ID below.
+   2) This decodes the ID token purely to show the person's name/photo in the UI.
+      It is NOT a security check — if you gate access to the backend by user,
+      verify the token server-side too (see api/analyze.js notes). */
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+
+let currentUser = null;
+const gsiButton = document.getElementById('gsiButton');
+const userChip = document.getElementById('userChip');
+const userAvatar = document.getElementById('userAvatar');
+const userName = document.getElementById('userName');
+const signOutBtn = document.getElementById('signOutBtn');
+const greetingLine = document.getElementById('greetingLine');
+
+function decodeJwt(token){
+  try{
+    const payload = token.split('.')[1];
+    const json = decodeURIComponent(atob(payload.replace(/-/g,'+').replace(/_/g,'/'))
+      .split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  } catch(e){ return null; }
+}
+
+function updateGreeting(){
+  if (!currentUser) return;
+  greetingLine.textContent = I18N[currentLang].greeting.replace('{name}', currentUser.given_name || currentUser.name || '');
+  greetingLine.style.display = 'block';
+}
+
+function handleCredentialResponse(response){
+  const payload = decodeJwt(response.credential);
+  if (!payload) return;
+  currentUser = payload;
+  gsiButton.style.display = 'none';
+  userChip.style.display = 'flex';
+  userAvatar.src = payload.picture || '';
+  userName.textContent = payload.given_name || payload.name || '';
+  updateGreeting();
+}
+
+signOutBtn.addEventListener('click', () => {
+  currentUser = null;
+  userChip.style.display = 'none';
+  gsiButton.style.display = '';
+  greetingLine.style.display = 'none';
+  if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+});
+
+window.addEventListener('load', () => {
+  if (GOOGLE_CLIENT_ID.startsWith('YOUR_GOOGLE_CLIENT_ID')) {
+    gsiButton.style.display = 'none'; // not configured yet — hide rather than show a broken button
+    return;
+  }
+  try{
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse });
+    google.accounts.id.renderButton(gsiButton, { theme: 'outline', size: 'medium', shape: 'pill' });
+  } catch(e){ console.warn('Google Sign-In not available yet', e); }
+});
+
+/* ---------------- upload ---------------- */
+let uploadedBase64 = null;
+let uploadedMediaType = null;
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const previewMeta = document.getElementById('previewMeta');
+const clearBtn = document.getElementById('clearBtn');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const statusLine = document.getElementById('statusLine');
+const manualToggle = document.getElementById('manualToggle');
+const manualPanel = document.getElementById('manualPanel');
+const manualRun = document.getElementById('manualRun');
+const hall = document.getElementById('hall');
+const colonnade = document.getElementById('colonnade');
+const metricRows = document.getElementById('metricRows');
+const scanline = document.getElementById('scanline');
+
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file){
+  if (!file || !file.type.startsWith('image/')) return;
+  uploadedMediaType = file.type;
+  const reader = new FileReader();
+  reader.onload = () => {
+    uploadedBase64 = reader.result.split(',')[1];
+    previewImg.src = reader.result;
+    previewMeta.textContent = file.name + ' · ' + Math.round(file.size/1024) + ' KB';
+    preview.classList.add('show');
+    analyzeBtn.disabled = false;
+    statusLine.textContent = '';
+    statusLine.classList.remove('err');
+  };
+  reader.readAsDataURL(file);
+}
+
+clearBtn.addEventListener('click', () => {
+  uploadedBase64 = null;
+  fileInput.value = '';
+  preview.classList.remove('show');
+  analyzeBtn.disabled = true;
+});
+
+manualToggle.addEventListener('click', () => manualPanel.classList.toggle('show'));
+
+/* ---------------- manual test rows (instant, local, no API) ---------------- */
+const DEFAULT_STATUS = { views:'good', ctr:'very_good', watchtime:'bad' };
+const STATUS_ICONS = { very_good:'↑', good:'✓', bad:'↓' };
+
+function optLabel(lang, status){
+  return status === 'very_good' ? I18N[lang].optVeryGood
+       : status === 'good' ? I18N[lang].optGood
+       : I18N[lang].optBad;
+}
+
+function pickerOptionsHtml(lang){
+  return ['very_good','good','bad'].map(s => `
+    <div class="status-picker-option" data-value="${s}">
+      <span class="status-icon ${s}">${STATUS_ICONS[s]}</span>${optLabel(lang, s)}
+    </div>`).join('');
+}
+
+function setPickerValue(picker, value){
+  picker.dataset.value = value;
+  const btn = picker.querySelector('.status-picker-btn');
+  btn.querySelector('.status-icon').className = `status-icon ${value}`;
+  btn.querySelector('.status-icon').textContent = STATUS_ICONS[value];
+  btn.querySelector('.picker-label').textContent = optLabel(currentLang, value);
+}
+
+function closeAllPickers(except){
+  document.querySelectorAll('.status-picker.open').forEach(p => { if (p !== except) p.classList.remove('open'); });
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.status-picker')) closeAllPickers();
+});
+
+function buildMetricRows(detected){
+  detected = detected || {};
+  const prev = {};
+  metricRows.querySelectorAll('.field-row').forEach(r => { prev[r.dataset.key] = r.querySelector('.status-picker').dataset.value; });
+
+  metricRows.innerHTML = '';
+  ORDER.forEach(key => {
+    const m = METRICS[key];
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    row.dataset.key = key;
+    const badge = detected[key] && detected[key].value
+      ? `<span class="ocr-badge">${escapeHtml(detected[key].value)}</span>` : '';
+    const fallbackStatus = (detected[key] && detected[key].status) || prev[key] || DEFAULT_STATUS[key];
+    row.innerHTML = `
+      <label>${m.name[currentLang]}${badge}</label>
+      <div class="status-picker" data-value="${fallbackStatus}">
+        <button type="button" class="status-picker-btn">
+          <span class="status-icon ${fallbackStatus}">${STATUS_ICONS[fallbackStatus]}</span>
+          <span class="picker-label">${optLabel(currentLang, fallbackStatus)}</span>
+          <span class="picker-caret">⌄</span>
+        </button>
+        <div class="status-picker-menu">${pickerOptionsHtml(currentLang)}</div>
+      </div>
+    `;
+    const picker = row.querySelector('.status-picker');
+    picker.querySelector('.status-picker-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = picker.classList.contains('open');
+      closeAllPickers();
+      picker.classList.toggle('open', !isOpen);
+    });
+    picker.querySelectorAll('.status-picker-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setPickerValue(picker, opt.dataset.value);
+        picker.classList.remove('open');
+      });
+    });
+    metricRows.appendChild(row);
+  });
+}
+buildMetricRows();
+
+manualRun.addEventListener('click', () => {
+  const result = {};
+  ORDER.forEach(key => {
+    const row = metricRows.querySelector(`.field-row[data-key="${key}"]`);
+    const status = row.querySelector('.status-picker').dataset.value;
+    const badge = row.querySelector('.ocr-badge');
+    result[key] = { status, value: badge ? badge.textContent : null };
+  });
+  lastResult = result;
+  renderPillars(result);
+});
+
+/* ---------------- image analysis: free, runs entirely in the browser ----------------
+   Uses Tesseract.js (OCR) to read the three numbers, and a simple colour
+   sample next to each recognized line to guess green (positive) vs grey (bad).
+   No server, no API key, no cost — but also less reliable than a vision model:
+   it can misread text or miss the colour, especially on unusual screenshots.
+   That's why results always land in the manual panel for a quick check. */
+
+const METRIC_PATTERNS = {
+  views:     { keywords:/aufrufe\b|\bviews\b|\bvues\b|visualizaciones|visualizzazioni/i, value:/(\d[\d.,]{0,9})/ },
+  ctr:       { keywords:/klickrate|click-through|taux de clics|tasa de clics|percentuale di clic/i, value:/(\d{1,3}[.,]\d{1,2}\s?%)/ },
+  watchtime: { keywords:/wiedergabedauer|view duration|durée de visionnage|duración media|durata media|watch time/i, value:/(\d{1,2}:\d{2})/ }
+};
+
+function parseOcrResult(fullText, lines){
+  const result = {};
+  for (const key of ORDER){
+    const pat = METRIC_PATTERNS[key];
+    // 1) try matching within a single OCR line (also gives us a bbox for colour sampling)
+    let hitLine = null;
+    if (lines) hitLine = lines.find(l => pat.keywords.test(l.text) && pat.value.test(l.text));
+    if (hitLine){
+      const val = hitLine.text.match(pat.value)[1];
+      result[key] = { value: val, bbox: hitLine.bbox };
+      continue;
+    }
+    // 2) fall back to a loose search across the whole text (keyword, then a number within ~20 chars)
+    const loose = new RegExp('(?:' + pat.keywords.source + ')[^\\d]{0,20}' + pat.value.source, 'i');
+    const m = fullText.match(loose);
+    if (m) result[key] = { value: m[1], bbox: null };
+  }
+  return result;
+}
+
+function sampleStatusColor(canvas, bbox){
+  if (!bbox) return null;
+  try{
+    const ctx = canvas.getContext('2d');
+    const x = Math.min(canvas.width - 12, bbox.x1 + 8);
+    const y0 = Math.max(0, bbox.y0);
+    const h = Math.max(4, bbox.y1 - bbox.y0);
+    const sample = ctx.getImageData(x, y0, Math.min(24, canvas.width - x), h).data;
+    let r=0,g=0,b=0,n=0;
+    for (let i=0; i<sample.length; i+=4){ r+=sample[i]; g+=sample[i+1]; b+=sample[i+2]; n++; }
+    r/=n; g/=n; b/=n;
+    if (g - Math.max(r,b) > 18 && g > 90) return 'good';   // greenish -> positive icon
+    if (Math.abs(r-g) < 12 && Math.abs(g-b) < 12 && g > 60 && g < 190) return 'bad'; // grey -> negative icon
+    return null;
+  } catch(e){ return null; }
+}
+
+analyzeBtn.addEventListener('click', async () => {
+  if (!uploadedBase64 || typeof Tesseract === 'undefined') {
+    statusLine.textContent = I18N[currentLang].statusErr;
+    statusLine.classList.add('err');
+    manualPanel.classList.add('show');
+    return;
+  }
+  analyzeBtn.disabled = true;
+  statusLine.classList.remove('err');
+  scanline.classList.add('active');
+  statusLine.textContent = I18N[currentLang].statusReadingSteps[0];
+
+  try{
+    // draw the image to a canvas so we can both feed it to Tesseract and sample colours
+    const canvas = document.createElement('canvas');
+    canvas.width = previewImg.naturalWidth;
+    canvas.height = previewImg.naturalHeight;
+    canvas.getContext('2d').drawImage(previewImg, 0, 0);
+
+    const { data } = await Tesseract.recognize(canvas, 'deu+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+          statusLine.textContent = I18N[currentLang].statusReadingSteps[1] + ' ' + Math.round(m.progress * 100) + '%';
+        } else if (m.status) {
+          statusLine.textContent = I18N[currentLang].statusReadingSteps[0];
+        }
+      }
+    });
+
+    const found = parseOcrResult(data.text || '', data.lines || null);
+    if (Object.keys(found).length === 0) throw new Error('No metrics recognized');
+
+    statusLine.textContent = I18N[currentLang].statusDone;
+
+    const detected = {};
+    ORDER.forEach(key => {
+      if (!found[key]) return;
+      const colorGuess = sampleStatusColor(canvas, found[key].bbox);
+      detected[key] = { value: found[key].value, status: colorGuess || 'good' };
+    });
+
+    buildMetricRows(detected);
+    manualPanel.classList.add('show');
+    manualPanel.scrollIntoView({behavior:'smooth', block:'center'});
+
+    const result = {};
+    ORDER.forEach(key => { result[key] = detected[key] || { status:'good', value:null }; });
+    lastResult = result;
+    renderPillars(result);
+  } catch(err){
+    console.error(err);
+    statusLine.textContent = I18N[currentLang].statusErr;
+    statusLine.classList.add('err');
+    manualPanel.classList.add('show');
+  } finally {
+    scanline.classList.remove('active');
+    analyzeBtn.disabled = false;
+  }
+});
+
+/* Views is a downstream result of CTR and watch time, so its cause/solution
+   must point at whichever of those two is actually the bottleneck — never
+   blame the thumbnail if CTR is already fine, and vice versa. */
+function resolveContent(key, status, result){
+  const node = METRICS[key].content[status];
+  if (key === 'views' && status !== 'very_good') {
+    const ctrStatus = (result.ctr && result.ctr.status) || 'good';
+    const wtStatus = (result.watchtime && result.watchtime.status) || 'good';
+    const ctrBad = ctrStatus === 'bad';
+    const wtBad = wtStatus === 'bad';
+    let branch = 'none';
+    if (ctrBad && wtBad) branch = 'both';
+    else if (ctrBad) branch = 'ctr';
+    else if (wtBad) branch = 'watchtime';
+    return node[branch];
+  }
+  return node;
+}
+
+/* ---------------- render: purely local, looks up METRICS bank ---------------- */
+function renderPillars(result){
+  colonnade.innerHTML = '';
+  const lang = currentLang;
+
+  ORDER.forEach(key => {
+    if (!result[key]) return;
+    const r = result[key];
+    const status = STATUS_META[r.status] ? r.status : 'good';
+    const meta = STATUS_META[status];
+    const m = METRICS[key];
+    const c = resolveContent(key, status, result);
+    const statusLabel = I18N[lang][status === 'very_good' ? 'veryGood' : status === 'good' ? 'good' : 'bad'];
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-stage">
+        ${gaugeSVG(status)}
+        <div class="badge"><span class="dot" style="background:${meta.color}"></span>${meta.icon} ${statusLabel}</div>
+      </div>
+      <div class="card-body">
+        <div class="metric-name">${escapeHtml(m.name[lang])}</div>
+        ${r.value ? `<div class="metric-value">${escapeHtml(r.value)}</div>` : ''}
+        <div class="block"><span class="lbl">${I18N[lang].reading}</span>${escapeHtml(c.reading[lang])}</div>
+        <div class="block"><span class="lbl">${I18N[lang].cause}</span>${escapeHtml(c.cause[lang])}</div>
+        <div class="block"><span class="lbl">${I18N[lang].solution}</span>${escapeHtml(c.solution[lang])}</div>
+      </div>
+    `;
+    colonnade.appendChild(card);
+  });
+
+  hall.classList.add('show');
+  hall.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function gaugeSVG(status){
+  const pct = { very_good:1, good:0.66, bad:0.33 }[status];
+  const colors = { very_good:'#5CC79A', good:'#C9A24B', bad:'#6B7180' };
+  const icon = { very_good:'↑', good:'✓', bad:'↓' }[status];
+  const col = colors[status];
+  const r = 40, c = 2 * Math.PI * r;
+  const dash = c * pct;
+  const filterId = 'glow' + Math.random().toString(36).slice(2,9);
+  return `
+  <svg width="104" height="104" viewBox="0 0 104 104">
+    <defs>${status === 'very_good' ? `<filter id="${filterId}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : ''}</defs>
+    <circle cx="52" cy="52" r="${r}" fill="none" stroke="#232833" stroke-width="8"/>
+    <circle cx="52" cy="52" r="${r}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round"
+      stroke-dasharray="${dash} ${c}" transform="rotate(-90 52 52)" ${status === 'very_good' ? `filter="url(#${filterId})"` : ''}/>
+    <text x="52" y="63" text-anchor="middle" font-size="28" font-family="Inter, sans-serif" font-weight="700" fill="${col}">${icon}</text>
+  </svg>`;
+}
+
+/* ---------------- init ---------------- */
+applyLang('de');
+</script>
+</body>
+</html>
