@@ -1308,17 +1308,42 @@ analyzeBtn.addEventListener('click', async () => {
     cctx.imageSmoothingQuality = 'high';
     cctx.drawImage(previewImg, 0, 0, canvas.width, canvas.height);
 
-    const { data } = await Tesseract.recognize(canvas, 'deu+eng', {
-      logger: m => {
-        if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-          statusLine.textContent = I18N[currentLang].statusReadingSteps[1] + ' ' + Math.round(m.progress * 100) + '%';
-        } else if (m.status) {
-          statusLine.textContent = I18N[currentLang].statusReadingSteps[0];
+    let lines = [];
+    let ocrText = '';
+    try {
+      const worker = await Tesseract.createWorker('deu+eng', 1, {
+        logger: m => {
+          if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+            statusLine.textContent = I18N[currentLang].statusReadingSteps[1] + ' ' + Math.round(m.progress * 100) + '%';
+          } else if (m.status) {
+            statusLine.textContent = I18N[currentLang].statusReadingSteps[0];
+          }
         }
-      }
-    });
+      });
+      const { data } = await worker.recognize(canvas, {}, { blocks: true });
+      await worker.terminate();
+      ocrText = data.text || '';
+      // Tesseract v5 returns text hierarchically (blocks -> paragraphs -> lines
+      // -> words), not as a flat "lines" array — flatten it ourselves so we
+      // get each line's text plus its bounding box (needed for colour lookup).
+      (data.blocks || []).forEach(block => {
+        (block.paragraphs || []).forEach(para => {
+          (para.lines || []).forEach(line => {
+            if (line.text && line.bbox) lines.push({ text: line.text, bbox: line.bbox });
+          });
+        });
+      });
+    } catch (workerErr) {
+      // fallback: simple text-only recognition (no icon colour detection,
+      // but values still get extracted) in case the worker/blocks API
+      // isn't available the way we expect
+      console.warn('Falling back to simple OCR (no icon positions):', workerErr);
+      const { data } = await Tesseract.recognize(canvas, 'deu+eng');
+      ocrText = data.text || '';
+      lines = [];
+    }
 
-    const found = parseOcrResult(data.text || '', data.lines || null);
+    const found = parseOcrResult(ocrText, lines.length ? lines : null);
     if (Object.keys(found).length === 0) throw new Error('No metrics recognized');
 
     // For each recognized row, look for icon-shaped colour blobs to the
