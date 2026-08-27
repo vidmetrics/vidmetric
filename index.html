@@ -1180,11 +1180,15 @@ const METRIC_PATTERNS = {
 };
 
 function fixPercentValue(v){
-  // OCR often drops the decimal comma in a percentage (e.g. "10,1 %" reads
-  // as "101%"). Click-through rates are virtually always under 100%, so a
-  // bare 3-digit number before the % is almost certainly a missing comma.
-  const m = v.match(/^(\d{3})\s?%$/);
-  if (m) return m[1].slice(0,2) + ',' + m[1].slice(2) + ' %';
+  // YouTube Studio always shows the click-through rate with exactly one
+  // decimal digit (e.g. "10,1 %", "5,6 %", "9,3 %"). OCR frequently drops
+  // that comma, turning it into a plain integer-looking percentage
+  // ("10,1 %" -> "101%", "5,6 %" -> "56%"). Since a real CTR reading
+  // without any decimal point basically never happens here, treat any
+  // comma-less 2+ digit percentage as having lost its decimal point
+  // before the last digit.
+  const m = v.match(/^(\d{2,})\s?%$/);
+  if (m) return m[1].slice(0, -1) + ',' + m[1].slice(-1) + ' %';
   return v;
 }
 
