@@ -1199,7 +1199,7 @@ function parseOcrResult(fullText, lines){
   return result;
 }
 
-function sampleStatusColor(canvas, bbox){
+function scanRowForIcon(canvas, bbox){
   if (!bbox) return null;
   try{
     const ctx = canvas.getContext('2d');
@@ -1208,32 +1208,57 @@ function sampleStatusColor(canvas, bbox){
     const y1 = Math.min(canvas.height, Math.round(bbox.y1) + padY);
     const h = y1 - y0;
     const xStart = Math.min(canvas.width - 4, Math.round(bbox.x1));
-    const w = canvas.width - xStart;
+    // icons sit in the same card as the text, never far off-screen —
+    // capping the search width avoids drifting into unrelated parts
+    // of a full-page screenshot
+    const w = Math.min(canvas.width - xStart, 220);
     if (w < 4 || h < 4) return null;
 
-    // Scan every column from the end of the recognized text to the right
-    // edge of the image (the icon can sit right next to the text or far
-    // out near the card edge, depending on layout) and find whichever
-    // column looks most like a coloured icon (green) or a filled grey dot.
     const data = ctx.getImageData(xStart, y0, w, h).data;
-    let bestGreen = -1, bestGray = -1;
-    for (let x = 0; x < w; x++){
-      let r=0,g=0,b=0;
-      for (let y = 0; y < h; y++){
+    // Scan every individual pixel (not a row-average — a small icon inside
+    // a taller text line would otherwise get diluted by the background and
+    // disappear) and remember the single strongest green/grey pixel found.
+    let bestGreen = { score:-1, x:-1 }, bestGray = { score:-1, x:-1 };
+    for (let y = 0; y < h; y++){
+      for (let x = 0; x < w; x++){
         const i = (y * w + x) * 4;
-        r += data[i]; g += data[i+1]; b += data[i+2];
+        const r = data[i], g = data[i+1], b = data[i+2];
+        const greenScore = g - Math.max(r, b);
+        if (greenScore > 22 && g > 90 && greenScore > bestGreen.score) bestGreen = { score:greenScore, x: xStart + x };
+        const grayness = Math.max(r,g,b) - Math.min(r,g,b);
+        const brightness = (r+g+b) / 3;
+        if (grayness < 20 && brightness > 90 && brightness < 195 && brightness > bestGray.score) bestGray = { score:brightness, x: xStart + x };
       }
-      r/=h; g/=h; b/=h;
-      const greenScore = g - Math.max(r, b);
-      if (greenScore > 15 && g > 85 && greenScore > bestGreen) bestGreen = greenScore;
+    }
+    return { bestGreen, bestGray };
+  } catch(e){ return null; }
+}
 
+function classifyColumn(canvas, x, bbox){
+  try{
+    const ctx = canvas.getContext('2d');
+    const padY = 6;
+    const y0 = Math.max(0, Math.round(bbox.y0) - padY);
+    const y1 = Math.min(canvas.height, Math.round(bbox.y1) + padY);
+    const h = y1 - y0;
+    const winW = 16;
+    const xs = Math.max(0, Math.round(x - winW/2));
+    const w = Math.min(winW, canvas.width - xs);
+    if (w < 2 || h < 2) return null;
+    const data = ctx.getImageData(xs, y0, w, h).data;
+    // again, per-pixel rather than a diluted average
+    let bestGreen = -1, bestGray = -1;
+    for (let i = 0; i < data.length; i += 4){
+      const r = data[i], g = data[i+1], b = data[i+2];
+      const greenScore = g - Math.max(r, b);
+      if (greenScore > 18 && g > 85 && greenScore > bestGreen) bestGreen = greenScore;
       const grayness = Math.max(r,g,b) - Math.min(r,g,b);
       const brightness = (r+g+b) / 3;
-      if (grayness < 14 && brightness > 75 && brightness < 200 && brightness > bestGray) bestGray = brightness;
+      if (grayness < 20 && brightness > 85 && brightness < 200 && brightness > bestGray) bestGray = brightness;
     }
-    if (bestGreen > 15) return 'good';
-    if (bestGray > 75) return 'bad';
-    return null; // no clear icon colour found — leave it to the person to check
+    if (bestGreen > 18) return 'good';
+    if (bestGray > 0) return 'bad';
+    return null;
   } catch(e){ return null; }
 }
 
@@ -1269,20 +1294,49 @@ analyzeBtn.addEventListener('click', async () => {
     const found = parseOcrResult(data.text || '', data.lines || null);
     if (Object.keys(found).length === 0) throw new Error('No metrics recognized');
 
+    // Pass 1: scan each recognized row independently for its best
+    // green/grey icon candidate.
+    const rowScans = {};
+    ORDER.forEach(key => {
+      if (found[key]) rowScans[key] = scanRowForIcon(canvas, found[key].bbox);
+    });
+
+    // Icons within one card always line up in the same column. If any row
+    // found a confident hit, reuse that exact x-position for the other
+    // rows too — far more reliable than each row guessing independently.
+    const candidateXs = [];
+    ORDER.forEach(key => {
+      const s = rowScans[key];
+      if (!s) return;
+      if (s.bestGreen.score > 22) candidateXs.push(s.bestGreen.x);
+      else if (s.bestGray.score > 90) candidateXs.push(s.bestGray.x);
+    });
+    let consensusX = null;
+    if (candidateXs.length){
+      candidateXs.sort((a,b) => a - b);
+      consensusX = candidateXs[Math.floor(candidateXs.length / 2)]; // median
+    }
+
+    // Pass 2: classify every row, preferring the shared consensus column
+    // (falling back to that row's own best guess if it disagrees strongly).
     const detected = {};
     let uncertainCount = 0;
     ORDER.forEach(key => {
-      if (found[key]) {
-        const colorGuess = sampleStatusColor(canvas, found[key].bbox);
-        if (!colorGuess) uncertainCount++;
-        detected[key] = { value: found[key].value, status: colorGuess || 'good', uncertain: !colorGuess };
-      } else {
-        // metric wasn't recognized at all — flag it clearly instead of
-        // silently guessing, and use the SAME object for both the picker
-        // and the rendered result so they can never disagree again
+      if (!found[key]) {
         uncertainCount++;
         detected[key] = { value: null, status: 'good', uncertain: true };
+        return;
       }
+      let status = consensusX !== null ? classifyColumn(canvas, consensusX, found[key].bbox) : null;
+      if (!status){
+        const s = rowScans[key];
+        if (s){
+          if (s.bestGreen.score > 22) status = 'good';
+          else if (s.bestGray.score > 90) status = 'bad';
+        }
+      }
+      if (!status) uncertainCount++;
+      detected[key] = { value: found[key].value, status: status || 'good', uncertain: !status };
     });
 
     buildMetricRows(detected);
