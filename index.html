@@ -1179,6 +1179,15 @@ const METRIC_PATTERNS = {
   watchtime: { keywords:/wiedergabe\s?dauer|durchschnittlich\w*\s*wiedergabe|view duration|durée de visionnage|duración media|durata media|watch time/i, value:/(\d{1,2}[:.]\d{2})/ }
 };
 
+function fixPercentValue(v){
+  // OCR often drops the decimal comma in a percentage (e.g. "10,1 %" reads
+  // as "101%"). Click-through rates are virtually always under 100%, so a
+  // bare 3-digit number before the % is almost certainly a missing comma.
+  const m = v.match(/^(\d{3})\s?%$/);
+  if (m) return m[1].slice(0,2) + ',' + m[1].slice(2) + ' %';
+  return v;
+}
+
 function parseOcrResult(fullText, lines){
   const result = {};
   for (const key of ORDER){
@@ -1187,14 +1196,19 @@ function parseOcrResult(fullText, lines){
     let hitLine = null;
     if (lines) hitLine = lines.find(l => pat.keywords.test(l.text) && pat.value.test(l.text));
     if (hitLine){
-      const val = hitLine.text.match(pat.value)[1];
+      let val = hitLine.text.match(pat.value)[1];
+      if (key === 'ctr') val = fixPercentValue(val);
       result[key] = { value: val, bbox: hitLine.bbox };
       continue;
     }
     // 2) fall back to a loose search across the whole text (keyword, then a number within ~20 chars)
     const loose = new RegExp('(?:' + pat.keywords.source + ')[^\\d]{0,20}' + pat.value.source, 'i');
     const m = fullText.match(loose);
-    if (m) result[key] = { value: m[1], bbox: null };
+    if (m) {
+      let val = m[1];
+      if (key === 'ctr') val = fixPercentValue(val);
+      result[key] = { value: val, bbox: null };
+    }
   }
   return result;
 }
