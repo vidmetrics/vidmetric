@@ -85,6 +85,24 @@
     width:20px;height:20px;line-height:1;
   }
   .user-chip button:hover{color:var(--paper);}
+  .footer-actions{
+    display:flex; justify-content:center; align-items:center; gap:22px;
+    margin-top:44px; font-size:12.5px;
+  }
+  .footer-link{
+    background:none; border:none; color:var(--paper-dim); cursor:pointer;
+    font-family:var(--f-body); font-size:12.5px; text-decoration:underline;
+    text-underline-offset:2px; padding:0;
+  }
+  .footer-link:hover{ color:var(--paper); }
+  .donate-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    background:transparent; border:1px solid var(--gold); color:var(--gold);
+    border-radius:999px; padding:7px 14px; font-size:12px; font-weight:600;
+    font-family:var(--f-body); cursor:pointer; text-decoration:none;
+    transition:background .15s, color .15s;
+  }
+  .donate-btn:hover{ background:var(--gold); color:#1B1406; }
   .greeting{
     font-size:14px;color:var(--gold);font-weight:600;margin:12px 0 0;
     font-family:'JetBrains Mono',monospace;
@@ -219,6 +237,11 @@
     background:rgba(201,162,75,0.12); border-radius:6px; padding:2px 6px; margin-left:8px;
   }
   body.rtl .ocr-badge{ margin-left:0; margin-right:8px; }
+  .unsure-flag{
+    font-size:10px; color:#D98C6B; margin-left:6px; cursor:help;
+    border-bottom:1px dashed #D98C6B;
+  }
+  body.rtl .unsure-flag{ margin-left:0; margin-right:6px; }
   .ocr-hint{
     font-size:11.5px; color:var(--paper-dim); margin-top:8px; line-height:1.5;
   }
@@ -384,9 +407,9 @@
       <div class="user-chip" id="userChip" style="display:none">
         <img id="userAvatar" alt="">
         <span id="userName"></span>
-        <button id="signOutBtn" title="Sign out">×</button>
       </div>
     </div>
+    <a id="donateBtnTop" class="donate-btn" href="#" target="_blank" rel="noopener" data-i18n="donateShort"></a>
     <div class="langbar">
       <button data-lang="de">DE</button>
       <button data-lang="en">EN</button>
@@ -509,6 +532,10 @@
     </div>
   </div>
 
+  <div class="footer-actions">
+    <a id="donateLink" class="footer-link" href="#" target="_blank" rel="noopener" data-i18n="donate"></a>
+    <button id="signOutBtn" class="footer-link" style="display:none" data-i18n="signOut"></button>
+  </div>
   <footer data-i18n="footer"></footer>
 </div>
 
@@ -543,6 +570,9 @@ const I18N = {
     solution:"Lösung",
     statusReadingSteps:["Screenshot wird analysiert…","Werte werden erkannt…","Diagnose wird vorbereitet…"],
     statusDone:"Fertig — Diagnose abgeschlossen.",
+    statusDoneUnsure:"Fertig — bei manchen Werten war die Farbe des Icons nicht eindeutig, bitte kurz prüfen (markiert mit ⚠).",
+    unsureFlag:"⚠",
+    unsureTooltip:"Status nicht sicher erkannt — bitte prüfen und ggf. anpassen",
     statusErr:"Bild konnte nicht automatisch gelesen werden. Versuche den manuellen Testmodus.",
     veryGood:"Sehr gut",
     good:"Gut",
@@ -550,7 +580,10 @@ const I18N = {
     optVeryGood:"Sehr gut ↑",
     optGood:"Gut ✓",
     optBad:"Braucht Arbeit ↓",
-    greeting:"Hallo, {name} 👋"
+    greeting:"Hallo, {name} 👋",
+    donate:"☕ VidMetric unterstützen (Spende)",
+    donateShort:"☕ Unterstützen",
+    signOut:"Abmelden"
   },
   en: {
     eyebrow:"YouTube Video Analytics",
@@ -578,6 +611,9 @@ const I18N = {
     solution:"Fix",
     statusReadingSteps:["Analyzing screenshot…","Detecting values…","Preparing diagnosis…"],
     statusDone:"Done — diagnosis complete.",
+    statusDoneUnsure:"Done — for some values the icon colour wasn't clear, please double-check (marked with ⚠).",
+    unsureFlag:"⚠",
+    unsureTooltip:"Status not confidently detected — please check and adjust if needed",
     statusErr:"Could not read the image automatically. Try manual test mode.",
     veryGood:"Very good",
     good:"Good",
@@ -585,7 +621,10 @@ const I18N = {
     optVeryGood:"Very good ↑",
     optGood:"Good ✓",
     optBad:"Needs work ↓",
-    greeting:"Hi, {name} 👋"
+    greeting:"Hi, {name} 👋",
+    donate:"☕ Support VidMetric (donation)",
+    donateShort:"☕ Support",
+    signOut:"Sign out"
   },
   fr: {
     eyebrow:"Analyse vidéo YouTube",
@@ -613,6 +652,9 @@ const I18N = {
     solution:"Solution",
     statusReadingSteps:["Analyse de la capture d'écran…","Détection des valeurs…","Préparation du diagnostic…"],
     statusDone:"Terminé — diagnostic complet.",
+    statusDoneUnsure:"Terminé — pour certaines valeurs, la couleur de l'icône n'était pas claire, merci de vérifier (marqué ⚠).",
+    unsureFlag:"⚠",
+    unsureTooltip:"Statut non détecté avec certitude — vérifie et ajuste si besoin",
     statusErr:"Impossible de lire l'image automatiquement. Essaie le mode de test manuel.",
     veryGood:"Très bien",
     good:"Bien",
@@ -620,7 +662,10 @@ const I18N = {
     optVeryGood:"Très bien ↑",
     optGood:"Bien ✓",
     optBad:"À améliorer ↓",
-    greeting:"Salut, {name} 👋"
+    greeting:"Salut, {name} 👋",
+    donate:"☕ Soutenir VidMetric (don)",
+    donateShort:"☕ Soutenir",
+    signOut:"Se déconnecter"
   },
   es: {
     eyebrow:"Análisis de video de YouTube",
@@ -648,6 +693,9 @@ const I18N = {
     solution:"Solución",
     statusReadingSteps:["Analizando la captura de pantalla…","Detectando valores…","Preparando el diagnóstico…"],
     statusDone:"Listo — diagnóstico completo.",
+    statusDoneUnsure:"Listo — para algunos valores el color del icono no estaba claro, revísalo (marcado con ⚠).",
+    unsureFlag:"⚠",
+    unsureTooltip:"Estado no detectado con certeza — revisa y ajusta si es necesario",
     statusErr:"No se pudo leer la imagen automáticamente. Prueba el modo de prueba manual.",
     veryGood:"Muy bien",
     good:"Bien",
@@ -655,7 +703,10 @@ const I18N = {
     optVeryGood:"Muy bien ↑",
     optGood:"Bien ✓",
     optBad:"Necesita mejorar ↓",
-    greeting:"Hola, {name} 👋"
+    greeting:"Hola, {name} 👋",
+    donate:"☕ Apoyar a VidMetric (donación)",
+    donateShort:"☕ Apoyar",
+    signOut:"Cerrar sesión"
   },
   it: {
     eyebrow:"Analisi video YouTube",
@@ -683,6 +734,9 @@ const I18N = {
     solution:"Soluzione",
     statusReadingSteps:["Analisi dello screenshot…","Rilevamento dei valori…","Preparazione della diagnosi…"],
     statusDone:"Fatto — diagnosi completata.",
+    statusDoneUnsure:"Fatto — per alcuni valori il colore dell'icona non era chiaro, controlla (contrassegnato con ⚠).",
+    unsureFlag:"⚠",
+    unsureTooltip:"Stato non rilevato con certezza — controlla e correggi se necessario",
     statusErr:"Impossibile leggere automaticamente l'immagine. Prova la modalità di test manuale.",
     veryGood:"Molto bene",
     good:"Bene",
@@ -690,7 +744,10 @@ const I18N = {
     optVeryGood:"Molto bene ↑",
     optGood:"Bene ✓",
     optBad:"Da migliorare ↓",
-    greeting:"Ciao, {name} 👋"
+    greeting:"Ciao, {name} 👋",
+    donate:"☕ Sostieni VidMetric (donazione)",
+    donateShort:"☕ Sostieni",
+    signOut:"Disconnetti"
   },
   ar: {
     eyebrow:"تحليلات فيديو يوتيوب",
@@ -718,6 +775,9 @@ const I18N = {
     solution:"الحل",
     statusReadingSteps:["جارٍ تحليل لقطة الشاشة…","جارٍ التعرّف على القيم…","جارٍ إعداد التشخيص…"],
     statusDone:"تم — اكتمل التشخيص.",
+    statusDoneUnsure:"تم — لبعض القيم لم يكن لون الأيقونة واضحًا، يُرجى التحقق (مُشار إليه بـ ⚠).",
+    unsureFlag:"⚠",
+    unsureTooltip:"لم يتم التعرف على الحالة بثقة — يُرجى التحقق والتعديل إذا لزم الأمر",
     statusErr:"تعذّرت قراءة الصورة تلقائيًا. جرّب الوضع اليدوي.",
     veryGood:"ممتاز",
     good:"جيد",
@@ -725,7 +785,10 @@ const I18N = {
     optVeryGood:"ممتاز ↑",
     optGood:"جيد ✓",
     optBad:"يحتاج تحسين ↓",
-    greeting:"مرحبًا، {name} 👋"
+    greeting:"مرحبًا، {name} 👋",
+    donate:"☕ ادعم VidMetric (تبرع)",
+    donateShort:"☕ ادعم",
+    signOut:"تسجيل الخروج"
   }
 };
 
@@ -908,6 +971,7 @@ function handleCredentialResponse(response){
   userChip.style.display = 'flex';
   userAvatar.src = payload.picture || '';
   userName.textContent = payload.given_name || payload.name || '';
+  signOutBtn.style.display = 'inline';
   updateGreeting();
 }
 
@@ -915,6 +979,7 @@ signOutBtn.addEventListener('click', () => {
   currentUser = null;
   userChip.style.display = 'none';
   gsiButton.style.display = '';
+  signOutBtn.style.display = 'none';
   greetingLine.style.display = 'none';
   if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
 });
@@ -929,6 +994,25 @@ window.addEventListener('load', () => {
     google.accounts.id.renderButton(gsiButton, { theme: 'outline', size: 'medium', shape: 'pill' });
   } catch(e){ console.warn('Google Sign-In not available yet', e); }
 });
+
+/* ---------------- PayPal donation link ----------------
+   1) Go to https://www.paypal.com/donate/buttons and create a free "Donate"
+      button for your PayPal account — no business account required.
+   2) It gives you a hosted_button_id. Paste the full donate URL below,
+      e.g. "https://www.paypal.com/donate/?hosted_button_id=ABCD1234EFGH".
+   3) Both donate links (top bar + footer) use this same URL. */
+const PAYPAL_DONATE_URL = "https://www.paypal.com/donate/?hosted_button_id=855RS459LHM3L";
+
+const donateLink = document.getElementById('donateLink');
+const donateBtnTop = document.getElementById('donateBtnTop');
+if (PAYPAL_DONATE_URL.includes('YOUR_HOSTED_BUTTON_ID')) {
+  // not configured yet — hide rather than send people to a broken link
+  donateLink.style.display = 'none';
+  donateBtnTop.style.display = 'none';
+} else {
+  donateLink.href = PAYPAL_DONATE_URL;
+  donateBtnTop.href = PAYPAL_DONATE_URL;
+}
 
 /* ---------------- upload ---------------- */
 let uploadedBase64 = null;
@@ -1028,9 +1112,11 @@ function buildMetricRows(detected){
     row.dataset.key = key;
     const badge = detected[key] && detected[key].value
       ? `<span class="ocr-badge">${escapeHtml(detected[key].value)}</span>` : '';
+    const unsure = detected[key] && detected[key].uncertain
+      ? `<span class="unsure-flag" title="${I18N[currentLang].unsureTooltip}">${I18N[currentLang].unsureFlag}</span>` : '';
     const fallbackStatus = (detected[key] && detected[key].status) || prev[key] || DEFAULT_STATUS[key];
     row.innerHTML = `
-      <label>${m.name[currentLang]}${badge}</label>
+      <label>${m.name[currentLang]}${badge}${unsure}</label>
       <div class="status-picker" data-value="${fallbackStatus}">
         <button type="button" class="status-picker-btn">
           <span class="status-icon ${fallbackStatus}">${STATUS_ICONS[fallbackStatus]}</span>
@@ -1052,6 +1138,7 @@ function buildMetricRows(detected){
         e.stopPropagation();
         setPickerValue(picker, opt.dataset.value);
         picker.classList.remove('open');
+        runManualDiagnosis(); // keep the diagnosis in sync with the dropdowns immediately
       });
     });
     metricRows.appendChild(row);
@@ -1059,7 +1146,7 @@ function buildMetricRows(detected){
 }
 buildMetricRows();
 
-manualRun.addEventListener('click', () => {
+function runManualDiagnosis(){
   const result = {};
   ORDER.forEach(key => {
     const row = metricRows.querySelector(`.field-row[data-key="${key}"]`);
@@ -1069,7 +1156,9 @@ manualRun.addEventListener('click', () => {
   });
   lastResult = result;
   renderPillars(result);
-});
+}
+
+manualRun.addEventListener('click', runManualDiagnosis);
 
 /* ---------------- image analysis: free, runs entirely in the browser ----------------
    Uses Tesseract.js (OCR) to read the three numbers, and a simple colour
@@ -1108,16 +1197,37 @@ function sampleStatusColor(canvas, bbox){
   if (!bbox) return null;
   try{
     const ctx = canvas.getContext('2d');
-    const x = Math.min(canvas.width - 12, bbox.x1 + 8);
-    const y0 = Math.max(0, bbox.y0);
-    const h = Math.max(4, bbox.y1 - bbox.y0);
-    const sample = ctx.getImageData(x, y0, Math.min(24, canvas.width - x), h).data;
-    let r=0,g=0,b=0,n=0;
-    for (let i=0; i<sample.length; i+=4){ r+=sample[i]; g+=sample[i+1]; b+=sample[i+2]; n++; }
-    r/=n; g/=n; b/=n;
-    if (g - Math.max(r,b) > 18 && g > 90) return 'good';   // greenish -> positive icon
-    if (Math.abs(r-g) < 12 && Math.abs(g-b) < 12 && g > 60 && g < 190) return 'bad'; // grey -> negative icon
-    return null;
+    const padY = 6;
+    const y0 = Math.max(0, Math.round(bbox.y0) - padY);
+    const y1 = Math.min(canvas.height, Math.round(bbox.y1) + padY);
+    const h = y1 - y0;
+    const xStart = Math.min(canvas.width - 4, Math.round(bbox.x1));
+    const w = canvas.width - xStart;
+    if (w < 4 || h < 4) return null;
+
+    // Scan every column from the end of the recognized text to the right
+    // edge of the image (the icon can sit right next to the text or far
+    // out near the card edge, depending on layout) and find whichever
+    // column looks most like a coloured icon (green) or a filled grey dot.
+    const data = ctx.getImageData(xStart, y0, w, h).data;
+    let bestGreen = -1, bestGray = -1;
+    for (let x = 0; x < w; x++){
+      let r=0,g=0,b=0;
+      for (let y = 0; y < h; y++){
+        const i = (y * w + x) * 4;
+        r += data[i]; g += data[i+1]; b += data[i+2];
+      }
+      r/=h; g/=h; b/=h;
+      const greenScore = g - Math.max(r, b);
+      if (greenScore > 15 && g > 85 && greenScore > bestGreen) bestGreen = greenScore;
+
+      const grayness = Math.max(r,g,b) - Math.min(r,g,b);
+      const brightness = (r+g+b) / 3;
+      if (grayness < 14 && brightness > 75 && brightness < 200 && brightness > bestGray) bestGray = brightness;
+    }
+    if (bestGreen > 15) return 'good';
+    if (bestGray > 75) return 'bad';
+    return null; // no clear icon colour found — leave it to the person to check
   } catch(e){ return null; }
 }
 
@@ -1153,13 +1263,13 @@ analyzeBtn.addEventListener('click', async () => {
     const found = parseOcrResult(data.text || '', data.lines || null);
     if (Object.keys(found).length === 0) throw new Error('No metrics recognized');
 
-    statusLine.textContent = I18N[currentLang].statusDone;
-
     const detected = {};
+    let uncertainCount = 0;
     ORDER.forEach(key => {
       if (!found[key]) return;
       const colorGuess = sampleStatusColor(canvas, found[key].bbox);
-      detected[key] = { value: found[key].value, status: colorGuess || 'good' };
+      if (!colorGuess) uncertainCount++;
+      detected[key] = { value: found[key].value, status: colorGuess || 'good', uncertain: !colorGuess };
     });
 
     buildMetricRows(detected);
@@ -1170,6 +1280,10 @@ analyzeBtn.addEventListener('click', async () => {
     ORDER.forEach(key => { result[key] = detected[key] || { status:'good', value:null }; });
     lastResult = result;
     renderPillars(result);
+
+    statusLine.textContent = uncertainCount > 0
+      ? I18N[currentLang].statusDoneUnsure
+      : I18N[currentLang].statusDone;
   } catch(err){
     console.error(err);
     statusLine.textContent = I18N[currentLang].statusErr;
