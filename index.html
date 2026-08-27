@@ -103,6 +103,19 @@
     transition:background .15s, color .15s;
   }
   .donate-btn:hover{ background:var(--gold); color:#1B1406; }
+  .paypal-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:#0070BA; color:#fff; text-decoration:none;
+    border-radius:10px; padding:10px 18px; font-family:var(--f-body);
+    font-size:13px; font-weight:600; transition:background .15s, transform .15s;
+  }
+  .paypal-btn:hover{ background:#005ea6; transform:translateY(-1px); }
+  .paypal-btn .paypal-icon{ font-size:15px; }
+  .paypal-btn .paypal-word{
+    font-family:Arial, sans-serif; font-style:italic; font-weight:800;
+    color:#FFC439; letter-spacing:-0.02em; margin-left:2px;
+  }
+  body.rtl .paypal-btn .paypal-word{ margin-left:0; margin-right:2px; }
   .greeting{
     font-size:14px;color:var(--gold);font-weight:600;margin:12px 0 0;
     font-family:'JetBrains Mono',monospace;
@@ -409,7 +422,6 @@
         <span id="userName"></span>
       </div>
     </div>
-    <a id="donateBtnTop" class="donate-btn" href="#" target="_blank" rel="noopener" data-i18n="donateShort"></a>
     <div class="langbar">
       <button data-lang="de">DE</button>
       <button data-lang="en">EN</button>
@@ -533,7 +545,11 @@
   </div>
 
   <div class="footer-actions">
-    <a id="donateLink" class="footer-link" href="#" target="_blank" rel="noopener" data-i18n="donate"></a>
+    <a id="donateLink" class="paypal-btn" href="#" target="_blank" rel="noopener">
+      <span class="paypal-icon">☕💲</span>
+      <span data-i18n="donate"></span>
+      <span class="paypal-word">PayPal</span>
+    </a>
     <button id="signOutBtn" class="footer-link" style="display:none" data-i18n="signOut"></button>
   </div>
   <footer data-i18n="footer"></footer>
@@ -581,8 +597,7 @@ const I18N = {
     optGood:"Gut ✓",
     optBad:"Braucht Arbeit ↓",
     greeting:"Hallo, {name} 👋",
-    donate:"☕ VidMetric unterstützen (Spende)",
-    donateShort:"☕ Unterstützen",
+    donate:"VidMetric unterstützen über",
     signOut:"Abmelden"
   },
   en: {
@@ -622,8 +637,7 @@ const I18N = {
     optGood:"Good ✓",
     optBad:"Needs work ↓",
     greeting:"Hi, {name} 👋",
-    donate:"☕ Support VidMetric (donation)",
-    donateShort:"☕ Support",
+    donate:"Support VidMetric via",
     signOut:"Sign out"
   },
   fr: {
@@ -663,8 +677,7 @@ const I18N = {
     optGood:"Bien ✓",
     optBad:"À améliorer ↓",
     greeting:"Salut, {name} 👋",
-    donate:"☕ Soutenir VidMetric (don)",
-    donateShort:"☕ Soutenir",
+    donate:"Soutenir VidMetric via",
     signOut:"Se déconnecter"
   },
   es: {
@@ -704,8 +717,7 @@ const I18N = {
     optGood:"Bien ✓",
     optBad:"Necesita mejorar ↓",
     greeting:"Hola, {name} 👋",
-    donate:"☕ Apoyar a VidMetric (donación)",
-    donateShort:"☕ Apoyar",
+    donate:"Apoyar a VidMetric vía",
     signOut:"Cerrar sesión"
   },
   it: {
@@ -745,8 +757,7 @@ const I18N = {
     optGood:"Bene ✓",
     optBad:"Da migliorare ↓",
     greeting:"Ciao, {name} 👋",
-    donate:"☕ Sostieni VidMetric (donazione)",
-    donateShort:"☕ Sostieni",
+    donate:"Sostieni VidMetric via",
     signOut:"Disconnetti"
   },
   ar: {
@@ -786,8 +797,7 @@ const I18N = {
     optGood:"جيد ✓",
     optBad:"يحتاج تحسين ↓",
     greeting:"مرحبًا، {name} 👋",
-    donate:"☕ ادعم VidMetric (تبرع)",
-    donateShort:"☕ ادعم",
+    donate:"ادعم VidMetric عبر",
     signOut:"تسجيل الخروج"
   }
 };
@@ -999,19 +1009,15 @@ window.addEventListener('load', () => {
    1) Go to https://www.paypal.com/donate/buttons and create a free "Donate"
       button for your PayPal account — no business account required.
    2) It gives you a hosted_button_id. Paste the full donate URL below,
-      e.g. "https://www.paypal.com/donate/?hosted_button_id=ABCD1234EFGH".
-   3) Both donate links (top bar + footer) use this same URL. */
+      e.g. "https://www.paypal.com/donate/?hosted_button_id=ABCD1234EFGH". */
 const PAYPAL_DONATE_URL = "https://www.paypal.com/donate/?hosted_button_id=855RS459LHM3L";
 
 const donateLink = document.getElementById('donateLink');
-const donateBtnTop = document.getElementById('donateBtnTop');
 if (PAYPAL_DONATE_URL.includes('YOUR_HOSTED_BUTTON_ID')) {
   // not configured yet — hide rather than send people to a broken link
   donateLink.style.display = 'none';
-  donateBtnTop.style.display = 'none';
 } else {
   donateLink.href = PAYPAL_DONATE_URL;
-  donateBtnTop.href = PAYPAL_DONATE_URL;
 }
 
 /* ---------------- upload ---------------- */
@@ -1266,20 +1272,25 @@ analyzeBtn.addEventListener('click', async () => {
     const detected = {};
     let uncertainCount = 0;
     ORDER.forEach(key => {
-      if (!found[key]) return;
-      const colorGuess = sampleStatusColor(canvas, found[key].bbox);
-      if (!colorGuess) uncertainCount++;
-      detected[key] = { value: found[key].value, status: colorGuess || 'good', uncertain: !colorGuess };
+      if (found[key]) {
+        const colorGuess = sampleStatusColor(canvas, found[key].bbox);
+        if (!colorGuess) uncertainCount++;
+        detected[key] = { value: found[key].value, status: colorGuess || 'good', uncertain: !colorGuess };
+      } else {
+        // metric wasn't recognized at all — flag it clearly instead of
+        // silently guessing, and use the SAME object for both the picker
+        // and the rendered result so they can never disagree again
+        uncertainCount++;
+        detected[key] = { value: null, status: 'good', uncertain: true };
+      }
     });
 
     buildMetricRows(detected);
     manualPanel.classList.add('show');
     manualPanel.scrollIntoView({behavior:'smooth', block:'center'});
 
-    const result = {};
-    ORDER.forEach(key => { result[key] = detected[key] || { status:'good', value:null }; });
-    lastResult = result;
-    renderPillars(result);
+    lastResult = detected;
+    renderPillars(detected);
 
     statusLine.textContent = uncertainCount > 0
       ? I18N[currentLang].statusDoneUnsure
