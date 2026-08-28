@@ -555,7 +555,6 @@
   <footer data-i18n="footer"></footer>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* ---------------- i18n (UI strings only) ---------------- */
@@ -590,6 +589,7 @@ const I18N = {
     unsureFlag:"⚠",
     unsureTooltip:"Status nicht sicher erkannt — bitte prüfen und ggf. anpassen",
     statusErr:"Bild konnte nicht automatisch gelesen werden. Versuche den manuellen Testmodus.",
+    statusBudget:"Das tägliche Analyse-Budget ist aktuell aufgebraucht. Trag die Werte gern manuell ein — oder unterstütze VidMetric, damit mehr automatische Analysen möglich sind.",
     veryGood:"Sehr gut",
     good:"Gut",
     bad:"Braucht Arbeit",
@@ -630,6 +630,7 @@ const I18N = {
     unsureFlag:"⚠",
     unsureTooltip:"Status not confidently detected — please check and adjust if needed",
     statusErr:"Could not read the image automatically. Try manual test mode.",
+    statusBudget:"Today's analysis budget is currently used up. Feel free to enter the values manually — or support VidMetric so more automatic analyses become possible.",
     veryGood:"Very good",
     good:"Good",
     bad:"Needs work",
@@ -670,6 +671,7 @@ const I18N = {
     unsureFlag:"⚠",
     unsureTooltip:"Statut non détecté avec certitude — vérifie et ajuste si besoin",
     statusErr:"Impossible de lire l'image automatiquement. Essaie le mode de test manuel.",
+    statusBudget:"Le budget d'analyse quotidien est actuellement épuisé. Saisis les valeurs manuellement — ou soutiens VidMetric pour permettre plus d'analyses automatiques.",
     veryGood:"Très bien",
     good:"Bien",
     bad:"À améliorer",
@@ -710,6 +712,7 @@ const I18N = {
     unsureFlag:"⚠",
     unsureTooltip:"Estado no detectado con certeza — revisa y ajusta si es necesario",
     statusErr:"No se pudo leer la imagen automáticamente. Prueba el modo de prueba manual.",
+    statusBudget:"El presupuesto de análisis de hoy ya se ha agotado. Introduce los valores manualmente — o apoya a VidMetric para permitir más análisis automáticos.",
     veryGood:"Muy bien",
     good:"Bien",
     bad:"Necesita mejorar",
@@ -750,6 +753,7 @@ const I18N = {
     unsureFlag:"⚠",
     unsureTooltip:"Stato non rilevato con certezza — controlla e correggi se necessario",
     statusErr:"Impossibile leggere automaticamente l'immagine. Prova la modalità di test manuale.",
+    statusBudget:"Il budget di analisi odierno è già esaurito. Inserisci i valori manualmente — oppure sostieni VidMetric per rendere possibili più analisi automatiche.",
     veryGood:"Molto bene",
     good:"Bene",
     bad:"Da migliorare",
@@ -790,6 +794,7 @@ const I18N = {
     unsureFlag:"⚠",
     unsureTooltip:"لم يتم التعرف على الحالة بثقة — يُرجى التحقق والتعديل إذا لزم الأمر",
     statusErr:"تعذّرت قراءة الصورة تلقائيًا. جرّب الوضع اليدوي.",
+    statusBudget:"تم استهلاك ميزانية التحليل اليومية حاليًا. يمكنك إدخال القيم يدويًا — أو دعم VidMetric لإتاحة المزيد من التحليلات التلقائية.",
     veryGood:"ممتاز",
     good:"جيد",
     bad:"يحتاج تحسين",
@@ -1166,229 +1171,62 @@ function runManualDiagnosis(){
 
 manualRun.addEventListener('click', runManualDiagnosis);
 
-/* ---------------- image analysis: free, runs entirely in the browser ----------------
-   Uses Tesseract.js (OCR) to read the three numbers, and a simple colour
-   sample next to each recognized line to guess green (positive) vs grey (bad).
-   No server, no API key, no cost — but also less reliable than a vision model:
-   it can misread text or miss the colour, especially on unusual screenshots.
-   That's why results always land in the manual panel for a quick check. */
+const API_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 
-const METRIC_PATTERNS = {
-  views:     { keywords:/aufrufe\b|\bviews\b|\bvues\b|visualizacion|visualizzazion/i, value:/(\d[\d.,]{0,9})/ },
-  ctr:       { keywords:/klick\s?rate|impressionen|click.?through|taux de clics|tasa de clics|percentuale di clic/i, value:/(\d{1,3}[.,]?\d{0,2}\s?%)/ },
-  watchtime: { keywords:/wiedergabe\s?dauer|durchschnittlich\w*\s*wiedergabe|view duration|durée de visionnage|duración media|durata media|watch time/i, value:/(\d{1,2}[:.]\d{2})/ }
-};
+const ANALYZE_PROMPT = `You are reading a screenshot of video analytics (e.g. YouTube Studio). Find exactly these three metrics if visible: views, impressions click-through rate, and average view duration. Ignore everything else in the image (likes, comments, subscribers, ranking, revenue, etc.) — do not extract or mention them.
 
-function fixPercentValue(v){
-  // YouTube Studio always shows the click-through rate with exactly one
-  // decimal digit (e.g. "10,1 %", "5,6 %", "9,3 %"). OCR frequently drops
-  // that comma, turning it into a plain integer-looking percentage
-  // ("10,1 %" -> "101%", "5,6 %" -> "56%"). Since a real CTR reading
-  // without any decimal point basically never happens here, treat any
-  // comma-less 2+ digit percentage as having lost its decimal point
-  // before the last digit.
-  const m = v.match(/^(\d{2,})\s?%$/);
-  if (m) return m[1].slice(0, -1) + ',' + m[1].slice(-1) + ' %';
-  return v;
-}
+For each of the three metrics you can see, report:
+- "value": the number/text shown exactly as displayed (e.g. "1123", "10,3 %", "1:13").
+- "status": "very_good" if a clearly positive/green upward arrow indicator is shown next to it, "good" if a circle-checkmark or neutral/steady indicator is shown, "bad" if a gray/red downward arrow indicator is shown. If no indicator is visible for a metric, default to "good".
 
-function parseOcrResult(fullText, lines){
-  const result = {};
-  for (const key of ORDER){
-    const pat = METRIC_PATTERNS[key];
-    // 1) try matching within a single OCR line (also gives us a bbox for colour sampling)
-    let hitLine = null;
-    if (lines) hitLine = lines.find(l => pat.keywords.test(l.text) && pat.value.test(l.text));
-    if (hitLine){
-      let val = hitLine.text.match(pat.value)[1];
-      if (key === 'ctr') val = fixPercentValue(val);
-      result[key] = { value: val, bbox: hitLine.bbox };
-      continue;
-    }
-    // 2) fall back to a loose search across the whole text (keyword, then a number within ~20 chars)
-    const loose = new RegExp('(?:' + pat.keywords.source + ')[^\\d]{0,20}' + pat.value.source, 'i');
-    const m = fullText.match(loose);
-    if (m) {
-      let val = m[1];
-      if (key === 'ctr') val = fixPercentValue(val);
-      result[key] = { value: val, bbox: null };
-    }
-  }
-  return result;
-}
+Do not write any explanation, cause, or solution text — only extract the raw value and status. If a metric isn't visible in the image, omit its key entirely.
 
-/* Icon colour detection, calibrated against real YouTube Studio screenshots:
-   - positive icon (check / up-arrow) ≈ RGB(16,117,22) — a strong, saturated green
-   - negative icon (down-arrow) ≈ RGB(96,96,96) — a pure neutral grey
-   Earlier attempts scanned loosely across a whole row and picked up grey
-   buttons/text elsewhere in the card. This version finds actual icon-shaped
-   blobs (small, roughly square, connected regions of matching colour) and
-   cross-checks their column position across all three rows, since the three
-   status icons always sit in exactly the same column within one card. */
-function colorType(r, g, b){
-  const greenScore = g - Math.max(r, b);
-  if (greenScore > 25 && g > 90) return 'green';
-  const grayness = Math.max(r, g, b) - Math.min(r, g, b);
-  const brightness = (r + g + b) / 3;
-  if (grayness < 8 && brightness > 80 && brightness < 180) return 'gray';
-  return null;
-}
-
-function findIconClustersInBand(canvas, y0, y1){
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  y0 = Math.max(0, Math.round(y0));
-  y1 = Math.min(canvas.height, Math.round(y1));
-  const h = y1 - y0;
-  if (h < 4) return [];
-  const data = ctx.getImageData(0, y0, w, h).data;
-  const visited = new Uint8Array(w * h);
-  const clusters = [];
-  for (let y = 0; y < h; y++){
-    for (let x = 0; x < w; x++){
-      const idx = y * w + x;
-      if (visited[idx]) continue;
-      const i = idx * 4;
-      const type = colorType(data[i], data[i+1], data[i+2]);
-      if (!type){ visited[idx] = 1; continue; }
-      visited[idx] = 1;
-      let minX=x, maxX=x, minY=y, maxY=y, count=1;
-      const stack = [[x,y]];
-      while (stack.length){
-        const [cx, cy] = stack.pop();
-        const neighbors = [[cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]];
-        for (const [nx, ny] of neighbors){
-          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-          const nidx = ny * w + nx;
-          if (visited[nidx]) continue;
-          const ni = nidx * 4;
-          const ntype = colorType(data[ni], data[ni+1], data[ni+2]);
-          if (ntype === type){
-            visited[nidx] = 1;
-            stack.push([nx, ny]);
-            count++;
-            if (nx < minX) minX = nx; if (nx > maxX) maxX = nx;
-            if (ny < minY) minY = ny; if (ny > maxY) maxY = ny;
-          }
-        }
-      }
-      const cw = maxX - minX + 1, ch = maxY - minY + 1;
-      // real status icons are small, roughly square blobs — this filters
-      // out buttons, borders, and stray text that happen to share a colour
-      if (count >= 25 && cw >= 6 && cw <= 24 && ch >= 6 && ch <= 24){
-        clusters.push({ type, cx: (minX+maxX)/2, cy: y0 + (minY+maxY)/2, count });
-      }
-    }
-  }
-  return clusters;
-}
+Respond with ONLY raw JSON, no markdown fences, no commentary, in exactly this shape:
+{"views":{"value":"...","status":"very_good|good|bad"},"ctr":{"value":"...","status":"very_good|good|bad"},"watchtime":{"value":"...","status":"very_good|good|bad"}}`;
 
 analyzeBtn.addEventListener('click', async () => {
-  if (!uploadedBase64 || typeof Tesseract === 'undefined') {
-    statusLine.textContent = I18N[currentLang].statusErr;
-    statusLine.classList.add('err');
-    manualPanel.classList.add('show');
-    return;
-  }
+  if (!uploadedBase64) return;
   analyzeBtn.disabled = true;
   statusLine.classList.remove('err');
   scanline.classList.add('active');
   statusLine.textContent = I18N[currentLang].statusReadingSteps[0];
 
   try{
-    // draw the image to a canvas so we can feed it to Tesseract and sample icon colours.
-    // Small or compressed screenshots confuse OCR on long German words, so
-    // upscale first — Tesseract reads noticeably better at higher resolution.
-    const scale = previewImg.naturalWidth < 900 ? 2 : 1;
-    const canvas = document.createElement('canvas');
-    canvas.width = previewImg.naturalWidth * scale;
-    canvas.height = previewImg.naturalHeight * scale;
-    const cctx = canvas.getContext('2d');
-    cctx.imageSmoothingEnabled = true;
-    cctx.imageSmoothingQuality = 'high';
-    cctx.drawImage(previewImg, 0, 0, canvas.width, canvas.height);
-
-    let lines = [];
-    let ocrText = '';
-    try {
-      const worker = await Tesseract.createWorker('deu+eng', 1, {
-        logger: m => {
-          if (m.status === 'recognizing text' && typeof m.progress === 'number') {
-            statusLine.textContent = I18N[currentLang].statusReadingSteps[1] + ' ' + Math.round(m.progress * 100) + '%';
-          } else if (m.status) {
-            statusLine.textContent = I18N[currentLang].statusReadingSteps[0];
-          }
-        }
-      });
-      const { data } = await worker.recognize(canvas, {}, { blocks: true });
-      await worker.terminate();
-      ocrText = data.text || '';
-      // Tesseract v5 returns text hierarchically (blocks -> paragraphs -> lines
-      // -> words), not as a flat "lines" array — flatten it ourselves so we
-      // get each line's text plus its bounding box (needed for colour lookup).
-      (data.blocks || []).forEach(block => {
-        (block.paragraphs || []).forEach(para => {
-          (para.lines || []).forEach(line => {
-            if (line.text && line.bbox) lines.push({ text: line.text, bbox: line.bbox });
-          });
-        });
-      });
-    } catch (workerErr) {
-      // fallback: simple text-only recognition (no icon colour detection,
-      // but values still get extracted) in case the worker/blocks API
-      // isn't available the way we expect
-      console.warn('Falling back to simple OCR (no icon positions):', workerErr);
-      const { data } = await Tesseract.recognize(canvas, 'deu+eng');
-      ocrText = data.text || '';
-      lines = [];
-    }
-
-    const found = parseOcrResult(ocrText, lines.length ? lines : null);
-    if (Object.keys(found).length === 0) throw new Error('No metrics recognized');
-
-    // For each recognized row, look for icon-shaped colour blobs somewhere
-    // in that row, then cross-check their column position across all three
-    // rows (they always line up) before trusting a colour reading. We only
-    // require the blob to be right of where the row's text *starts* (not
-    // where OCR thinks it *ends* — that boundary is often slightly off and
-    // was wrongly excluding the real icon).
-    const rowClusters = {};
-    ORDER.forEach(key => {
-      if (!found[key] || !found[key].bbox) return;
-      const padY = Math.max(15, (found[key].bbox.y1 - found[key].bbox.y0));
-      const clusters = findIconClustersInBand(canvas, found[key].bbox.y0 - padY, found[key].bbox.y1 + padY)
-        .filter(c => c.cx > found[key].bbox.x0);
-      if (clusters.length) rowClusters[key] = clusters;
+    const response = await fetch(API_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 400,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: uploadedMediaType, data: uploadedBase64 } },
+            { type: "text", text: ANALYZE_PROMPT }
+          ]
+        }]
+      })
     });
 
-    const allCx = [];
-    ORDER.forEach(key => { (rowClusters[key] || []).forEach(c => allCx.push(c.cx)); });
-    let consensusCx = null;
-    if (allCx.length){
-      allCx.sort((a,b) => a - b);
-      consensusCx = allCx[Math.floor(allCx.length / 2)];
+    if (response.status === 402 || response.status === 429) {
+      statusLine.textContent = I18N[currentLang].statusBudget;
+      statusLine.classList.add('err');
+      manualPanel.classList.add('show');
+      return;
     }
+    if (!response.ok) throw new Error('Server error ' + response.status);
+
+    const data = await response.json();
+    const textBlock = (data.content || []).find(b => b.type === 'text');
+    if (!textBlock) throw new Error('No text in response');
+    const clean = textBlock.text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    const parsed = JSON.parse(clean);
 
     const detected = {};
-    let uncertainCount = 0;
     ORDER.forEach(key => {
-      if (!found[key]) {
-        uncertainCount++;
-        detected[key] = { value: null, status: 'good', uncertain: true };
-        return;
-      }
-      let status = null;
-      const clusters = rowClusters[key] || [];
-      if (clusters.length){
-        let best = clusters[0];
-        if (consensusCx !== null){
-          best = clusters.reduce((a,b) => Math.abs(a.cx-consensusCx) < Math.abs(b.cx-consensusCx) ? a : b);
-          if (Math.abs(best.cx - consensusCx) > 30) best = null; // too far from the shared icon column
-        }
-        if (best) status = best.type === 'green' ? 'good' : 'bad';
-      }
-      if (!status) uncertainCount++;
-      detected[key] = { value: found[key].value, status: status || 'good', uncertain: !status };
+      detected[key] = parsed[key]
+        ? { value: parsed[key].value || null, status: parsed[key].status || 'good', uncertain: false }
+        : { value: null, status: 'good', uncertain: true };
     });
 
     buildMetricRows(detected);
@@ -1397,10 +1235,7 @@ analyzeBtn.addEventListener('click', async () => {
 
     lastResult = detected;
     renderPillars(detected);
-
-    statusLine.textContent = uncertainCount > 0
-      ? I18N[currentLang].statusDoneUnsure
-      : I18N[currentLang].statusDone;
+    statusLine.textContent = I18N[currentLang].statusDone;
   } catch(err){
     console.error(err);
     statusLine.textContent = I18N[currentLang].statusErr;
@@ -1411,6 +1246,7 @@ analyzeBtn.addEventListener('click', async () => {
     analyzeBtn.disabled = false;
   }
 });
+
 
 /* Views is a downstream result of CTR and watch time, so its cause/solution
    must point at whichever of those two is actually the bottleneck — never
