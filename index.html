@@ -1171,18 +1171,7 @@ function runManualDiagnosis(){
 
 manualRun.addEventListener('click', runManualDiagnosis);
 
-const API_ENDPOINT = 'https://api.anthropic.com/v1/messages';
-
-const ANALYZE_PROMPT = `You are reading a screenshot of video analytics (e.g. YouTube Studio). Find exactly these three metrics if visible: views, impressions click-through rate, and average view duration. Ignore everything else in the image (likes, comments, subscribers, ranking, revenue, etc.) — do not extract or mention them.
-
-For each of the three metrics you can see, report:
-- "value": the number/text shown exactly as displayed (e.g. "1123", "10,3 %", "1:13").
-- "status": "very_good" if a clearly positive/green upward arrow indicator is shown next to it, "good" if a circle-checkmark or neutral/steady indicator is shown, "bad" if a gray/red downward arrow indicator is shown. If no indicator is visible for a metric, default to "good".
-
-Do not write any explanation, cause, or solution text — only extract the raw value and status. If a metric isn't visible in the image, omit its key entirely.
-
-Respond with ONLY raw JSON, no markdown fences, no commentary, in exactly this shape:
-{"views":{"value":"...","status":"very_good|good|bad"},"ctr":{"value":"...","status":"very_good|good|bad"},"watchtime":{"value":"...","status":"very_good|good|bad"}}`;
+const API_ENDPOINT = '/api/analyze';
 
 analyzeBtn.addEventListener('click', async () => {
   if (!uploadedBase64) return;
@@ -1195,20 +1184,10 @@ analyzeBtn.addEventListener('click', async () => {
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 400,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: uploadedMediaType, data: uploadedBase64 } },
-            { type: "text", text: ANALYZE_PROMPT }
-          ]
-        }]
-      })
+      body: JSON.stringify({ image: uploadedBase64, mediaType: uploadedMediaType })
     });
 
-    if (response.status === 402 || response.status === 429) {
+    if (response.status === 402) {
       statusLine.textContent = I18N[currentLang].statusBudget;
       statusLine.classList.add('err');
       manualPanel.classList.add('show');
@@ -1216,12 +1195,7 @@ analyzeBtn.addEventListener('click', async () => {
     }
     if (!response.ok) throw new Error('Server error ' + response.status);
 
-    const data = await response.json();
-    const textBlock = (data.content || []).find(b => b.type === 'text');
-    if (!textBlock) throw new Error('No text in response');
-    const clean = textBlock.text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
-    const parsed = JSON.parse(clean);
-
+    const parsed = await response.json();
     const detected = {};
     ORDER.forEach(key => {
       detected[key] = parsed[key]
