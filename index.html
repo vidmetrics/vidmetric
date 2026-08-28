@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VidMetric — YouTube Video Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#12151B;
@@ -22,7 +22,7 @@
     --f-display:'Fraunces',serif;
     --f-body:'Inter',sans-serif;
   }
-  body.lang-ar{ --f-display:'Amiri',serif; --f-body:'Cairo',sans-serif; }
+  body.lang-ar{ --f-display:'Cairo',sans-serif; --f-body:'Cairo',sans-serif; }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
@@ -482,9 +482,9 @@
               </div>
             </div>
             <div class="mock-tag">YouTube Studio</div>
-            <div class="mock-row"><span>Aufrufe</span><b>1.391</b><i class="dot good"></i></div>
-            <div class="mock-row"><span>Klickrate</span><b>10,1 %</b><i class="dot verygood"></i></div>
-            <div class="mock-row"><span>Wiedergabedauer</span><b>1:11</b><i class="dot bad"></i></div>
+            <div class="mock-row"><span data-metric-label="views"></span><b>1.391</b><i class="dot good"></i></div>
+            <div class="mock-row"><span data-metric-label="ctr"></span><b>10,1 %</b><i class="dot verygood"></i></div>
+            <div class="mock-row"><span data-metric-label="watchtime"></span><b>1:11</b><i class="dot bad"></i></div>
           </div>
         </div>
         <div class="guide-caption" data-i18n="guidePc"></div>
@@ -501,9 +501,9 @@
               </div>
             </div>
             <div class="mock-tag">YouTube Studio</div>
-            <div class="mock-row"><span>Aufrufe</span><b>1.075</b><i class="dot bad"></i></div>
-            <div class="mock-row"><span>Klickrate</span><b>5,6 %</b><i class="dot bad"></i></div>
-            <div class="mock-row"><span>Wiedergabedauer</span><b>0:50</b><i class="dot bad"></i></div>
+            <div class="mock-row"><span data-metric-label="views"></span><b>1.075</b><i class="dot bad"></i></div>
+            <div class="mock-row"><span data-metric-label="ctr"></span><b>5,6 %</b><i class="dot bad"></i></div>
+            <div class="mock-row"><span data-metric-label="watchtime"></span><b>0:50</b><i class="dot bad"></i></div>
           </div>
         </div>
         <div class="guide-caption" data-i18n="guideMobileFeed"></div>
@@ -966,6 +966,10 @@ function applyLang(lang){
   });
   document.querySelectorAll('.langbar button').forEach(b => {
     b.classList.toggle('active', b.dataset.lang === lang);
+  });
+  document.querySelectorAll('[data-metric-label]').forEach(el => {
+    const key = el.getAttribute('data-metric-label');
+    if (METRICS[key]) el.textContent = METRICS[key].name[lang];
   });
 
   buildMetricRows();
