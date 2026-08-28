@@ -295,6 +295,13 @@
   .manual{display:none;margin-top:22px;padding-top:22px;border-top:1px solid var(--hairline);}
   .manual.show{display:block;}
   .field-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .flow-connector{
+    display:flex; align-items:center; gap:10px; justify-content:center;
+    margin:2px 0 14px; padding:6px 0;
+    border-top:1px dashed var(--hairline); border-bottom:1px dashed var(--hairline);
+  }
+  .flow-connector .flow-arrow{ color:var(--gold); font-size:14px; letter-spacing:2px; }
+  .flow-connector .flow-label{ font-size:11px; color:var(--paper-dim); font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; }
   .field-row label{font-size:12.5px;color:var(--paper-dim);min-width:110px;font-family:'JetBrains Mono',monospace;letter-spacing:0.03em;}
   .field-row input[type=text]{
     flex:1;min-width:160px;background:var(--surface-2);color:var(--paper);border:1px solid var(--hairline);
@@ -352,10 +359,28 @@
   .hall-title .plat{color:var(--gold);}
 
   .colonnade{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
-    gap:22px;
+    display:flex;
+    align-items:stretch;
+    gap:0;
     margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .flow-arrow-h{
+    display:flex; align-items:center; justify-content:center;
+    flex:0 0 auto; width:44px; min-height:60px;
+    color:var(--gold); font-size:22px;
+  }
+  .card-result{
+    border-color:var(--gold);
+    box-shadow:var(--shadow), 0 0 0 1px rgba(201,162,75,0.25);
+    flex:1.1 1 260px;
+  }
+  .card:not(.card-result){ flex:1 1 240px; }
+
+  @media (max-width:820px){
+    .colonnade{ flex-direction:column; }
+    .flow-arrow-h{ width:100%; min-height:0; padding:4px 0; font-size:0; }
+    .flow-arrow-h::after{ content:"↓"; font-size:22px; }
   }
 
   .card{
@@ -588,6 +613,7 @@ const I18N = {
     statusDoneUnsure:"Werte gelesen — wähle bitte für jede Kennzahl kurz den passenden Status (⚠), das kann die Bilderkennung nicht zuverlässig selbst erkennen.",
     unsureFlag:"⚠",
     unsureTooltip:"Status nicht sicher erkannt — bitte prüfen und ggf. anpassen",
+    flowLabel:"beide zusammen ergeben die Aufrufe",
     statusErr:"Bild konnte nicht automatisch gelesen werden. Versuche den manuellen Testmodus.",
     statusBudget:"Das tägliche Analyse-Budget ist aktuell aufgebraucht. Trag die Werte gern manuell ein — oder unterstütze VidMetric, damit mehr automatische Analysen möglich sind.",
     veryGood:"Sehr gut",
@@ -629,6 +655,7 @@ const I18N = {
     statusDoneUnsure:"Values read — please pick the right status (⚠) for each metric yourself, the image recognition can't reliably tell that part.",
     unsureFlag:"⚠",
     unsureTooltip:"Status not confidently detected — please check and adjust if needed",
+    flowLabel:"together, these drive views",
     statusErr:"Could not read the image automatically. Try manual test mode.",
     statusBudget:"Today's analysis budget is currently used up. Feel free to enter the values manually — or support VidMetric so more automatic analyses become possible.",
     veryGood:"Very good",
@@ -670,6 +697,7 @@ const I18N = {
     statusDoneUnsure:"Valeurs lues — choisis toi-même le bon statut (⚠) pour chaque indicateur, la reconnaissance d'image ne peut pas le déterminer de façon fiable.",
     unsureFlag:"⚠",
     unsureTooltip:"Statut non détecté avec certitude — vérifie et ajuste si besoin",
+    flowLabel:"ensemble, ces deux éléments déterminent les vues",
     statusErr:"Impossible de lire l'image automatiquement. Essaie le mode de test manuel.",
     statusBudget:"Le budget d'analyse quotidien est actuellement épuisé. Saisis les valeurs manuellement — ou soutiens VidMetric pour permettre plus d'analyses automatiques.",
     veryGood:"Très bien",
@@ -711,6 +739,7 @@ const I18N = {
     statusDoneUnsure:"Valores leídos — elige tú mismo el estado correcto (⚠) para cada métrica, el reconocimiento de imagen no puede determinarlo de forma fiable.",
     unsureFlag:"⚠",
     unsureTooltip:"Estado no detectado con certeza — revisa y ajusta si es necesario",
+    flowLabel:"juntos, determinan las visualizaciones",
     statusErr:"No se pudo leer la imagen automáticamente. Prueba el modo de prueba manual.",
     statusBudget:"El presupuesto de análisis de hoy ya se ha agotado. Introduce los valores manualmente — o apoya a VidMetric para permitir más análisis automáticos.",
     veryGood:"Muy bien",
@@ -752,6 +781,7 @@ const I18N = {
     statusDoneUnsure:"Valori letti — scegli tu lo stato corretto (⚠) per ogni metrica, il riconoscimento immagine non può determinarlo in modo affidabile.",
     unsureFlag:"⚠",
     unsureTooltip:"Stato non rilevato con certezza — controlla e correggi se necessario",
+    flowLabel:"insieme determinano le visualizzazioni",
     statusErr:"Impossibile leggere automaticamente l'immagine. Prova la modalità di test manuale.",
     statusBudget:"Il budget di analisi odierno è già esaurito. Inserisci i valori manualmente — oppure sostieni VidMetric per rendere possibili più analisi automatiche.",
     veryGood:"Molto bene",
@@ -793,6 +823,7 @@ const I18N = {
     statusDoneUnsure:"تمت قراءة القيم — يُرجى اختيار الحالة الصحيحة (⚠) لكل مقياس بنفسك، فتمييز الألوان تلقائيًا غير موثوق بما يكفي.",
     unsureFlag:"⚠",
     unsureTooltip:"لم يتم التعرف على الحالة بثقة — يُرجى التحقق والتعديل إذا لزم الأمر",
+    flowLabel:"معًا، يحددان المشاهدات",
     statusErr:"تعذّرت قراءة الصورة تلقائيًا. جرّب الوضع اليدوي.",
     statusBudget:"تم استهلاك ميزانية التحليل اليومية حاليًا. يمكنك إدخال القيم يدويًا — أو دعم VidMetric لإتاحة المزيد من التحليلات التلقائية.",
     veryGood:"ممتاز",
@@ -917,7 +948,7 @@ const STATUS_META = {
   bad:      { color:"var(--bad)", icon:"↓" }
 };
 
-const ORDER = ['views','ctr','watchtime'];
+const ORDER = ['ctr', 'watchtime', 'views']; // causes first, Views (the result) last
 
 let currentLang = 'de';
 let lastResult = null; // { views:{value,status}, ctr:{...}, watchtime:{...} }
@@ -940,6 +971,7 @@ function applyLang(lang){
   buildMetricRows();
   if (lastResult) renderPillars(lastResult);
   if (currentUser) updateGreeting();
+  if (!currentUser && typeof renderGoogleButton === 'function' && window.google) renderGoogleButton();
 }
 
 document.querySelectorAll('.langbar button').forEach(b => {
@@ -999,16 +1031,22 @@ signOutBtn.addEventListener('click', () => {
   if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
 });
 
-window.addEventListener('load', () => {
+function renderGoogleButton(){
   if (GOOGLE_CLIENT_ID.startsWith('YOUR_GOOGLE_CLIENT_ID')) {
     gsiButton.style.display = 'none'; // not configured yet — hide rather than show a broken button
     return;
   }
   try{
+    gsiButton.innerHTML = '';
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse });
-    google.accounts.id.renderButton(gsiButton, { theme: 'filled_black', size: 'medium', shape: 'pill', text: 'signin_with' });
+    google.accounts.id.renderButton(gsiButton, {
+      theme: 'filled_black', size: 'medium', shape: 'pill', text: 'signin_with',
+      locale: currentLang // keeps the button's own text in sync with the language switcher
+    });
   } catch(e){ console.warn('Google Sign-In not available yet', e); }
-});
+}
+
+window.addEventListener('load', renderGoogleButton);
 
 /* ---------------- PayPal donation link ----------------
    1) Go to https://www.paypal.com/donate/buttons and create a free "Donate"
@@ -1116,7 +1154,8 @@ function buildMetricRows(detected){
   metricRows.querySelectorAll('.field-row').forEach(r => { prev[r.dataset.key] = r.querySelector('.status-picker').dataset.value; });
 
   metricRows.innerHTML = '';
-  ORDER.forEach(key => {
+
+  function buildRow(key){
     const m = METRICS[key];
     const row = document.createElement('div');
     row.className = 'field-row';
@@ -1152,8 +1191,16 @@ function buildMetricRows(detected){
         runManualDiagnosis(); // keep the diagnosis in sync with the dropdowns immediately
       });
     });
-    metricRows.appendChild(row);
-  });
+    return row;
+  }
+
+  metricRows.appendChild(buildRow('views'));
+  const connector = document.createElement('div');
+  connector.className = 'flow-connector';
+  connector.innerHTML = `<span class="flow-arrow">⤴ ⤵</span><span class="flow-label">${I18N[currentLang].flowLabel}</span>`;
+  metricRows.appendChild(connector);
+  metricRows.appendChild(buildRow('ctr'));
+  metricRows.appendChild(buildRow('watchtime'));
 }
 buildMetricRows();
 
@@ -1246,9 +1293,9 @@ function renderPillars(result){
   colonnade.innerHTML = '';
   const lang = currentLang;
 
-  ORDER.forEach(key => {
-    if (!result[key]) return;
+  function buildCard(key){
     const r = result[key];
+    if (!r) return null;
     const status = STATUS_META[r.status] ? r.status : 'good';
     const meta = STATUS_META[status];
     const m = METRICS[key];
@@ -1256,7 +1303,7 @@ function renderPillars(result){
     const statusLabel = I18N[lang][status === 'very_good' ? 'veryGood' : status === 'good' ? 'good' : 'bad'];
 
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = 'card' + (key === 'views' ? ' card-result' : '');
     card.innerHTML = `
       <div class="card-stage">
         ${gaugeSVG(status)}
@@ -1270,8 +1317,25 @@ function renderPillars(result){
         <div class="block"><span class="lbl">${I18N[lang].solution}</span>${escapeHtml(c.solution[lang])}</div>
       </div>
     `;
-    colonnade.appendChild(card);
-  });
+    return card;
+  }
+
+  function arrowEl(dir){
+    const el = document.createElement('div');
+    el.className = 'flow-arrow-h';
+    el.textContent = dir;
+    return el;
+  }
+
+  const ctrCard = buildCard('ctr');
+  const watchtimeCard = buildCard('watchtime');
+  const viewsCard = buildCard('views');
+
+  if (ctrCard) colonnade.appendChild(ctrCard);
+  if (ctrCard && viewsCard) colonnade.appendChild(arrowEl('→'));
+  if (viewsCard) colonnade.appendChild(viewsCard);
+  if (viewsCard && watchtimeCard) colonnade.appendChild(arrowEl('←'));
+  if (watchtimeCard) colonnade.appendChild(watchtimeCard);
 
   hall.classList.add('show');
   hall.scrollIntoView({behavior:'smooth', block:'start'});
