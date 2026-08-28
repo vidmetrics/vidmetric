@@ -1346,15 +1346,18 @@ analyzeBtn.addEventListener('click', async () => {
     const found = parseOcrResult(ocrText, lines.length ? lines : null);
     if (Object.keys(found).length === 0) throw new Error('No metrics recognized');
 
-    // For each recognized row, look for icon-shaped colour blobs to the
-    // right of the text, then cross-check their column position across all
-    // three rows (they always line up) before trusting a colour reading.
+    // For each recognized row, look for icon-shaped colour blobs somewhere
+    // in that row, then cross-check their column position across all three
+    // rows (they always line up) before trusting a colour reading. We only
+    // require the blob to be right of where the row's text *starts* (not
+    // where OCR thinks it *ends* — that boundary is often slightly off and
+    // was wrongly excluding the real icon).
     const rowClusters = {};
     ORDER.forEach(key => {
       if (!found[key] || !found[key].bbox) return;
       const padY = Math.max(15, (found[key].bbox.y1 - found[key].bbox.y0));
       const clusters = findIconClustersInBand(canvas, found[key].bbox.y0 - padY, found[key].bbox.y1 + padY)
-        .filter(c => c.cx > found[key].bbox.x1); // icon sits to the right of the recognized text
+        .filter(c => c.cx > found[key].bbox.x0);
       if (clusters.length) rowClusters[key] = clusters;
     });
 
